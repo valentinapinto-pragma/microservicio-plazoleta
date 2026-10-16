@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.config;
 
+import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserValidationPort;
 import com.pragma.plazoleta.domain.servicePort.RestaurantServicePort;
@@ -19,6 +20,8 @@ class BeanConfigurationTest {
 
     @Mock
     private UserValidationPort userValidationPort;
+    private DishPersistentPort dishPersistentPort;
+
 
     @Test
     @DisplayName("Should create RestaurantServicePort bean instance")
@@ -26,5 +29,8 @@ class BeanConfigurationTest {
         BeanConfiguration config = new BeanConfiguration();
         RestaurantServicePort bean = config.restaurantServicePort(restaurantPersistentPort, userValidationPort);
         assertNotNull(bean);
+        assertNotNull(config.dishServicePort(dishPersistentPort, restaurantPersistentPort));
+
     }
+
 }

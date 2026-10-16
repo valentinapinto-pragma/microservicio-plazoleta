@@ -26,4 +26,9 @@ public class RestaurantAdapterRepository implements RestaurantPersistentPort {
     public boolean existsByNit(String nit) {
         return restaurantRepository.existsByNit(nit);
     }
+
+    @Override
+    public boolean existsById(Long id) {
+        return restaurantRepository.existsById(id);
+    }
 }

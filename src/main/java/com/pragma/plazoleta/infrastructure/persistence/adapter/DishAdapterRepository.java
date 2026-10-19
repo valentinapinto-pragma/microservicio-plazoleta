@@ -8,6 +8,8 @@ import com.pragma.plazoleta.infrastructure.persistence.repository.DishRepository
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 @RequiredArgsConstructor
 public class DishAdapterRepository implements DishPersistentPort {
@@ -20,5 +22,10 @@ public class DishAdapterRepository implements DishPersistentPort {
         DishEntity entity = dishEntityMapper.toEntity(dish);
         DishEntity savedEntity = dishRepository.save(entity);
         return dishEntityMapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public Optional<Dish> findById(Long id) {
+        return dishRepository.findById(id).map(dishEntityMapper::toDomain);
     }
 }

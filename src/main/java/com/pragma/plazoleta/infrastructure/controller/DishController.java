@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.controller;
 
 import com.pragma.plazoleta.application.dto.request.DishRequestDto;
+import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
 import com.pragma.plazoleta.application.handler.DishHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -9,10 +10,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.Collections;
@@ -35,5 +33,18 @@ public class DishController {
         dishHandler.createDish(dishRequestDto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Collections.singletonMap("message", "Dish created successfully"));
+    }
+
+    @Operation(summary = "Update a dish", description = "Allows the owner to update the price and description of an existing dish")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dish updated successfully", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Dish not found", content = @Content)
+    })
+    @PatchMapping("/{id}")
+    public ResponseEntity<Map<String, String>> updateDish(@PathVariable Long id,
+                                                          @Valid @RequestBody UpdateDishRequestDto updateDishRequestDto) {
+        dishHandler.updateDish(id, updateDishRequestDto);
+        return ResponseEntity.ok(Collections.singletonMap("message", "Dish updated successfully"));
     }
 }

@@ -1,9 +1,6 @@
 package com.pragma.plazoleta.infrastructure.exceptionhandler;
 
-import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
-import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
-import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
-import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
+import com.pragma.plazoleta.domain.exception.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -53,6 +50,12 @@ public class ControllerAdvisor {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Collections.singletonMap(MESSAGE_KEY, ex.getMessage()));
     }
+    @ExceptionHandler(DishNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleDishNotFoundException(DishNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Collections.singletonMap(MESSAGE_KEY, ex.getMessage()));
+    }
+
 
 
 }

@@ -14,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -56,4 +58,18 @@ class DishAdapterRepositoryTest {
         verify(dishRepository).save(entity);
         verify(dishEntityMapper).toDomain(entity);
     }
+    @Test
+    @DisplayName("Should find dish by id through repository and mapper")
+    void shouldFindDishById() {
+        when(dishRepository.findById(1L)).thenReturn(Optional.of(entity));
+        when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
+
+        Optional<Dish> result = dishAdapterRepository.findById(1L);
+
+        assertTrue(result.isPresent());
+        assertEquals(dish.getName(), result.get().getName());
+        verify(dishRepository).findById(1L);
+        verify(dishEntityMapper).toDomain(entity);
+    }
+
 }

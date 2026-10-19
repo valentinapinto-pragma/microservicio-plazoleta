@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.application.handler;
 
 import com.pragma.plazoleta.application.dto.request.DishRequestDto;
+import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
 import com.pragma.plazoleta.application.mapper.DishDtoMapper;
 import com.pragma.plazoleta.domain.model.Category;
 import com.pragma.plazoleta.domain.model.Dish;
@@ -39,4 +40,14 @@ class DishHandlerTest {
         verify(dishDtoMapper).toDomain(requestDto);
         verify(dishServicePort).createDish(domainDish);
     }
+    @Test
+    @DisplayName("Should call dish service port on update dish")
+    void shouldUpdateDishSuccessfully() {
+        UpdateDishRequestDto updateDto = new UpdateDishRequestDto(35000, "Descripción actualizada");
+
+        dishHandler.updateDish(1L, updateDto);
+
+        verify(dishServicePort).updateDish(1L, 35000, "Descripción actualizada");
+    }
+
 }

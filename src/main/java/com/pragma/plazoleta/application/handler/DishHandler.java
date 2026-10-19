@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.application.handler;
 
 import com.pragma.plazoleta.application.dto.request.DishRequestDto;
+import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
 import com.pragma.plazoleta.application.mapper.DishDtoMapper;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
 import lombok.RequiredArgsConstructor;
@@ -17,5 +18,9 @@ public class DishHandler {
 
     public void createDish(DishRequestDto dishRequestDto) {
         dishServicePort.createDish(dishDtoMapper.toDomain(dishRequestDto));
+    }
+
+    public void updateDish(Long id, UpdateDishRequestDto updateDishRequestDto) {
+        dishServicePort.updateDish(id, updateDishRequestDto.getPrice(), updateDishRequestDto.getDescription());
     }
 }

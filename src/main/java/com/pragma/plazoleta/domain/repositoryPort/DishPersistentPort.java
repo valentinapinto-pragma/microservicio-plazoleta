@@ -1,11 +1,11 @@
 package com.pragma.plazoleta.domain.repositoryPort;
 
+import com.pragma.plazoleta.domain.comun.CrudBase;
 import com.pragma.plazoleta.domain.model.Dish;
 
-import java.util.Optional;
+public interface DishPersistentPort extends CrudBase<Dish, Long> {
 
-public interface DishPersistentPort {
-    Dish saveDish(Dish dish);
-    Optional<Dish> findById(Long id);
-
+    default Dish saveDish(Dish dish) {
+        return save(dish);
+    }
 }

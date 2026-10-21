@@ -8,6 +8,10 @@ import com.pragma.plazoleta.infrastructure.persistence.repository.RestaurantRepo
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 @Component
 @RequiredArgsConstructor
 public class RestaurantAdapterRepository implements RestaurantPersistentPort {
@@ -16,10 +20,34 @@ public class RestaurantAdapterRepository implements RestaurantPersistentPort {
     private final RestaurantEntityMapper restaurantEntityMapper;
 
     @Override
-    public Restaurant saveRestaurant(Restaurant restaurant) {
+    public Restaurant save(Restaurant restaurant) {
         RestaurantEntity entity = restaurantEntityMapper.toEntity(restaurant);
-        RestaurantEntity savedEntity = restaurantRepository.save(entity);
-        return restaurantEntityMapper.toDomain(savedEntity);
+        return restaurantEntityMapper.toDomain(restaurantRepository.save(entity));
+    }
+
+    @Override
+    public Optional<Restaurant> findById(Long id) {
+        return restaurantRepository.findById(id)
+                .map(restaurantEntityMapper::toDomain);
+    }
+
+    @Override
+    public List<Restaurant> findAll() {
+        return restaurantRepository.findAll()
+                .stream()
+                .map(restaurantEntityMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Restaurant update(Restaurant restaurant) {
+        RestaurantEntity entity = restaurantEntityMapper.toEntity(restaurant);
+        return restaurantEntityMapper.toDomain(restaurantRepository.save(entity));
+    }
+
+    @Override
+    public void delete(Long id) {
+        restaurantRepository.deleteById(id);
     }
 
     @Override

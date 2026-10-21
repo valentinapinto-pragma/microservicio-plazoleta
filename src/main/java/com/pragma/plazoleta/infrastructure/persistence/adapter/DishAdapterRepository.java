@@ -8,7 +8,9 @@ import com.pragma.plazoleta.infrastructure.persistence.repository.DishRepository
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -18,14 +20,39 @@ public class DishAdapterRepository implements DishPersistentPort {
     private final DishEntityMapper dishEntityMapper;
 
     @Override
-    public Dish saveDish(Dish dish) {
+    public Dish save(Dish dish) {
         DishEntity entity = dishEntityMapper.toEntity(dish);
         DishEntity savedEntity = dishRepository.save(entity);
         return dishEntityMapper.toDomain(savedEntity);
     }
 
     @Override
+    public Dish saveDish(Dish dish) {
+        return save(dish);
+    }
+
+    @Override
     public Optional<Dish> findById(Long id) {
         return dishRepository.findById(id).map(dishEntityMapper::toDomain);
+    }
+
+    @Override
+    public List<Dish> findAll() {
+        return dishRepository.findAll()
+                .stream()
+                .map(dishEntityMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Dish update(Dish dish) {
+        DishEntity entity = dishEntityMapper.toEntity(dish);
+        DishEntity savedEntity = dishRepository.save(entity);
+        return dishEntityMapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public void delete(Long id) {
+        dishRepository.deleteById(id);
     }
 }

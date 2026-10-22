@@ -6,13 +6,13 @@ import com.pragma.plazoleta.infrastructure.persistence.entity.RestaurantEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.RestaurantEntityMapper;
 import com.pragma.plazoleta.infrastructure.persistence.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class RestaurantAdapterRepository implements RestaurantPersistentPort {
 

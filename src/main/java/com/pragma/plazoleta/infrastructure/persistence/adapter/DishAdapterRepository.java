@@ -6,13 +6,13 @@ import com.pragma.plazoleta.infrastructure.persistence.entity.DishEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.DishEntityMapper;
 import com.pragma.plazoleta.infrastructure.persistence.repository.DishRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Component
+@Repository
 @RequiredArgsConstructor
 public class DishAdapterRepository implements DishPersistentPort {
 

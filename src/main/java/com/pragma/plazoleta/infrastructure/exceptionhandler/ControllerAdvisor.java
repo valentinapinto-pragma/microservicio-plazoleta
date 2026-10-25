@@ -39,6 +39,7 @@ public class ControllerAdvisor {
         });
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
     }
+
     @ExceptionHandler(InvalidDishDataException.class)
     public ResponseEntity<Map<String, String>> handleInvalidDishDataException(InvalidDishDataException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -50,12 +51,16 @@ public class ControllerAdvisor {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Collections.singletonMap(MESSAGE_KEY, ex.getMessage()));
     }
+
     @ExceptionHandler(DishNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleDishNotFoundException(DishNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Collections.singletonMap(MESSAGE_KEY, ex.getMessage()));
     }
 
-
-
+    @ExceptionHandler(UserNotOwnerOfRestaurantException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotOwnerOfRestaurantException(UserNotOwnerOfRestaurantException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Collections.singletonMap(MESSAGE_KEY, ex.getMessage()));
+    }
 }

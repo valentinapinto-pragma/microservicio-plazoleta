@@ -1,5 +1,7 @@
 package com.pragma.plazoleta.infrastructure.config;
 
+import com.pragma.plazoleta.application.handler.DishHandler;
+import com.pragma.plazoleta.application.mapper.DishDtoMapper;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserValidationPort;
@@ -26,6 +28,11 @@ public class BeanConfiguration {
     public DishServicePort dishServicePort(DishPersistentPort dishPersistentPort,
                                            RestaurantPersistentPort restaurantPersistentPort) {
         return new DishUseCase(dishPersistentPort, restaurantPersistentPort);
+    }
+
+    @Bean
+    public DishHandler dishHandler(DishServicePort dishServicePort, DishDtoMapper dishDtoMapper) {
+        return new DishHandler(dishServicePort, dishDtoMapper);
     }
 
     @Bean

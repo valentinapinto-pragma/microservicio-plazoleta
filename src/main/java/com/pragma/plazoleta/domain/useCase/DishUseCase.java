@@ -3,7 +3,9 @@ package com.pragma.plazoleta.domain.useCase;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
 import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
+import com.pragma.plazoleta.domain.exception.UserNotOwnerOfRestaurantException;
 import com.pragma.plazoleta.domain.model.Dish;
+import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
@@ -14,7 +16,9 @@ public class DishUseCase implements DishServicePort {
     private static final String INVALID_DESCRIPTION_MESSAGE = "The dish description cannot be empty";
     private static final String INVALID_RESTAURANT_MESSAGE = "The restaurant associated with the dish does not exist";
     private static final String INVALID_CATEGORY_MESSAGE = "The dish must be assigned to a valid category";
+    private static final String INVALID_STATUS_MESSAGE = "The active status cannot be null";
     private static final String DISH_NOT_FOUND_MESSAGE = "Dish not found with id: ";
+    private static final String NOT_OWNER_MESSAGE = "The user is not the owner of the restaurant to which the dish belongs";
 
     private final DishPersistentPort dishPersistentPort;
     private final RestaurantPersistentPort restaurantPersistentPort;
@@ -41,6 +45,26 @@ public class DishUseCase implements DishServicePort {
                 .orElseThrow(() -> new DishNotFoundException(DISH_NOT_FOUND_MESSAGE + id));
         dish.setPrice(price);
         dish.setDescription(description);
+        return dishPersistentPort.saveDish(dish);
+    }
+
+    @Override
+    public Dish changeDishStatus(Long id, Boolean active, Long ownerId) {
+        if (active == null) {
+            throw new InvalidDishDataException(INVALID_STATUS_MESSAGE);
+        }
+
+        Dish dish = dishPersistentPort.findById(id)
+                .orElseThrow(() -> new DishNotFoundException(DISH_NOT_FOUND_MESSAGE + id));
+
+        Restaurant restaurant = restaurantPersistentPort.findById(dish.getIdRestaurant())
+                .orElseThrow(() -> new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE));
+
+        if (ownerId == null || !restaurant.getIdOwner().equals(ownerId)) {
+            throw new UserNotOwnerOfRestaurantException(NOT_OWNER_MESSAGE);
+        }
+
+        dish.setActive(active);
         return dishPersistentPort.saveDish(dish);
     }
 

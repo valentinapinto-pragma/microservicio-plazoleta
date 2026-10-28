@@ -60,11 +60,11 @@ class RestaurantControllerTest {
         mockMvc.perform(post("/restaurants")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.message").value("Restaurant created successfully"));
+                .andExpect(status().isCreated());
 
         verify(restaurantHandler).createRestaurant(any(RestaurantRequestDto.class));
     }
+
 
     @Test
     @DisplayName("Should return 400 Bad Request when validation fails")

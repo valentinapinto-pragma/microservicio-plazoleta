@@ -15,8 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.Collections;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/dishes")
@@ -32,10 +30,9 @@ public class DishController {
             @ApiResponse(responseCode = "400", description = "Invalid input data or restaurant not found", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<Map<String, String>> createDish(@Valid @RequestBody DishRequestDto dishRequestDto) {
+    public ResponseEntity<Void> createDish(@Valid @RequestBody DishRequestDto dishRequestDto) {
         dishHandler.createDish(dishRequestDto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Collections.singletonMap("message", "Dish created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Update a dish", description = "Allows the owner to update the price and description of an existing dish")
@@ -45,10 +42,10 @@ public class DishController {
             @ApiResponse(responseCode = "404", description = "Dish not found", content = @Content)
     })
     @PatchMapping("/{id}")
-    public ResponseEntity<Map<String, String>> updateDish(@PathVariable Long id,
-                                                          @Valid @RequestBody UpdateDishRequestDto updateDishRequestDto) {
+    public ResponseEntity<Void> updateDish(@PathVariable Long id,
+                                           @Valid @RequestBody UpdateDishRequestDto updateDishRequestDto) {
         dishHandler.updateDish(id, updateDishRequestDto);
-        return ResponseEntity.ok(Collections.singletonMap("message", "Dish updated successfully"));
+        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "Enable or disable a dish", description = "Allows the owner of the restaurant to enable or disable a dish")
@@ -59,18 +56,17 @@ public class DishController {
             @ApiResponse(responseCode = "404", description = "Dish or restaurant not found", content = @Content)
     })
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Map<String, String>> changeDishStatus(
+    public ResponseEntity<Void> changeDishStatus(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String token,
             @Valid @RequestBody DishStatusRequestDto dishStatusRequestDto) {
 
         if (token == null || !"ROLE_OWNER".equals(jwtAdapter.extractRole(token))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Collections.singletonMap("message", "User must possess the OWNER role to modify dishes"));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
         Long ownerId = jwtAdapter.extractUserId(token);
         dishHandler.changeDishStatus(id, dishStatusRequestDto, ownerId);
-        return ResponseEntity.ok(Collections.singletonMap("message", "Dish status updated successfully"));
+        return ResponseEntity.ok().build();
     }
 }

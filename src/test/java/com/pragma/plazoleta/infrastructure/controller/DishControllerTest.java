@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -51,9 +52,6 @@ class DishControllerTest {
                 .setControllerAdvice(new ControllerAdvisor())
                 .build();
     }
-
-    // --- TESTS HU-3: CREATE DISH ---
-
     @Test
     @DisplayName("Should return 201 Created when dish data is valid")
     void shouldReturnCreatedWhenValid() throws Exception {
@@ -64,8 +62,9 @@ class DishControllerTest {
         mockMvc.perform(post("/dishes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.message").value("Dish created successfully"));
+                .andExpect(status().isCreated());
+
+        verify(dishHandler).createDish(any(DishRequestDto.class));
     }
 
     @Test
@@ -77,6 +76,8 @@ class DishControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest());
+
+        verify(dishHandler, never()).createDish(any());
     }
 
     @Test
@@ -109,8 +110,6 @@ class DishControllerTest {
                 .andExpect(jsonPath("$.message").value("The dish price must be an integer greater than 0"));
     }
 
-    // --- TESTS HU-4: UPDATE DISH ---
-
     @Test
     @DisplayName("Should return 200 OK when dish is updated successfully")
     void shouldReturnOkWhenDishUpdated() throws Exception {
@@ -121,8 +120,9 @@ class DishControllerTest {
         mockMvc.perform(patch("/dishes/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Dish updated successfully"));
+                .andExpect(status().isOk());
+
+        verify(dishHandler).updateDish(eq(1L), any(UpdateDishRequestDto.class));
     }
 
     @Test
@@ -140,8 +140,6 @@ class DishControllerTest {
                 .andExpect(jsonPath("$.message").value("Dish not found with id: 99"));
     }
 
-    // --- TESTS HU-7: CHANGE DISH STATUS ---
-
     @Test
     @DisplayName("Should return 200 OK when dish status is changed successfully by restaurant owner")
     void shouldReturnOkWhenDishStatusChangedSuccessfully() throws Exception {
@@ -156,8 +154,7 @@ class DishControllerTest {
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(statusDto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Dish status updated successfully"));
+                .andExpect(status().isOk());
 
         verify(jwtAdapter).extractRole(token);
         verify(jwtAdapter).extractUserId(token);
@@ -172,8 +169,7 @@ class DishControllerTest {
         mockMvc.perform(patch("/dishes/1/status")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(statusDto)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("User must possess the OWNER role to modify dishes"));
+                .andExpect(status().isForbidden());
 
         verify(dishHandler, never()).changeDishStatus(any(), any(), any());
     }
@@ -190,8 +186,7 @@ class DishControllerTest {
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(statusDto)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("User must possess the OWNER role to modify dishes"));
+                .andExpect(status().isForbidden());
 
         verify(dishHandler, never()).changeDishStatus(any(), any(), any());
     }
@@ -237,11 +232,9 @@ class DishControllerTest {
     @Test
     @DisplayName("Should return 400 Bad Request when status DTO has null active field")
     void shouldReturnBadRequestWhenStatusDtoIsInvalid() throws Exception {
-        String token = "Bearer owner.token";
-        DishStatusRequestDto invalidDto = new DishStatusRequestDto(null); // active = null
+        DishStatusRequestDto invalidDto = new DishStatusRequestDto(null);
 
         mockMvc.perform(patch("/dishes/1/status")
-                        .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest());

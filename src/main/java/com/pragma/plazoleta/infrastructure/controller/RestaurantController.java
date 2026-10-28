@@ -15,8 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.util.Collections;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/restaurants")
@@ -31,9 +29,8 @@ public class RestaurantController {
             @ApiResponse(responseCode = "400", description = "Invalid input data or owner not valid", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<Map<String, String>> createRestaurant(@Valid @RequestBody RestaurantRequestDto restaurantRequestDto) {
+    public ResponseEntity<Void> createRestaurant(@Valid @RequestBody RestaurantRequestDto restaurantRequestDto) {
         restaurantHandler.createRestaurant(restaurantRequestDto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Collections.singletonMap("message", "Restaurant created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

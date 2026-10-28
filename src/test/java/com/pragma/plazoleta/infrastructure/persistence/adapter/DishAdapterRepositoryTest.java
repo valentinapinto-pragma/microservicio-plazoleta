@@ -50,7 +50,7 @@ class DishAdapterRepositoryTest {
         when(dishRepository.save(entity)).thenReturn(entity);
         when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
 
-        Dish result = dishAdapterRepository.saveDish(dish);
+        Dish result = dishAdapterRepository.save(dish);
 
         assertNotNull(result);
         assertEquals(dish.getName(), result.getName());

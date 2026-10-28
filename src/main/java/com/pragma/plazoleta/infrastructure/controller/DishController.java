@@ -4,6 +4,7 @@ import com.pragma.plazoleta.application.dto.request.DishRequestDto;
 import com.pragma.plazoleta.application.dto.request.DishStatusRequestDto;
 import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
 import com.pragma.plazoleta.application.handler.DishHandler;
+import com.pragma.plazoleta.domain.model.RoleEnum;
 import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -61,7 +62,7 @@ public class DishController {
             @RequestHeader(value = "Authorization", required = false) String token,
             @Valid @RequestBody DishStatusRequestDto dishStatusRequestDto) {
 
-        if (token == null || !"ROLE_OWNER".equals(jwtAdapter.extractRole(token))) {
+        if (token == null || !RoleEnum.OWNER.getRoleName().equals(jwtAdapter.extractRole(token))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 

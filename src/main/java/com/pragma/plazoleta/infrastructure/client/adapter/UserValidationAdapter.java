@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.client.adapter;
 
+import com.pragma.plazoleta.domain.model.RoleEnum;
 import com.pragma.plazoleta.domain.repositoryPort.UserValidationPort;
 import com.pragma.plazoleta.infrastructure.client.dto.UserResponseDto;
 import com.pragma.plazoleta.infrastructure.client.feign.UserFeignClient;
@@ -11,7 +12,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class UserValidationAdapter implements UserValidationPort {
 
-    private static final Long OWNER_ROLE_ID = 2L;
     private final UserFeignClient userFeignClient;
 
     @Override
@@ -29,8 +29,9 @@ public class UserValidationAdapter implements UserValidationPort {
             return false;
         }
         if (user.getRoleId() != null) {
-            return OWNER_ROLE_ID.equals(user.getRoleId());
+            return RoleEnum.OWNER.getId().equals(user.getRoleId());
         }
-        return user.getRole() != null && OWNER_ROLE_ID.equals(user.getRole().getId());
+        return user.getRole() != null && RoleEnum.OWNER.getId().equals(user.getRole().getId());
     }
+
 }

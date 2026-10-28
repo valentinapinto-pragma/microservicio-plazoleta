@@ -5,7 +5,5 @@ import com.pragma.plazoleta.domain.model.Dish;
 
 public interface DishPersistentPort extends CrudBase<Dish, Long> {
 
-    default Dish saveDish(Dish dish) {
-        return save(dish);
-    }
+
 }

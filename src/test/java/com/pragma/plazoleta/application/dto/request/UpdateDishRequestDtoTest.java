@@ -59,4 +59,22 @@ class UpdateDishRequestDtoTest {
         assertEquals(15000, dto.getPrice());
         assertEquals("Descripción", dto.getDescription());
     }
+    @Test
+    @DisplayName("Should pass validation when only price is provided")
+    void shouldPassValidationWhenOnlyPriceIsProvided() {
+        UpdateDishRequestDto dto = new UpdateDishRequestDto(32000, null);
+
+        Set<ConstraintViolation<UpdateDishRequestDto>> violations = validator.validate(dto);
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Should pass validation when only description is provided")
+    void shouldPassValidationWhenOnlyDescriptionIsProvided() {
+        UpdateDishRequestDto dto = new UpdateDishRequestDto(null, "Nueva descripción deliciosa");
+
+        Set<ConstraintViolation<UpdateDishRequestDto>> violations = validator.validate(dto);
+        assertTrue(violations.isEmpty());
+    }
+
 }

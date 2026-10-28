@@ -27,11 +27,6 @@ public class DishAdapterRepository implements DishPersistentPort {
     }
 
     @Override
-    public Dish saveDish(Dish dish) {
-        return save(dish);
-    }
-
-    @Override
     public Optional<Dish> findById(Long id) {
         return dishRepository.findById(id).map(dishEntityMapper::toDomain);
     }

@@ -5,8 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Positive;
 
 @Getter
@@ -15,10 +14,9 @@ import javax.validation.constraints.Positive;
 @NoArgsConstructor
 public class UpdateDishRequestDto {
 
-    @NotNull(message = "The price is mandatory")
     @Positive(message = "The price must be an integer greater than 0")
     private Integer price;
 
-    @NotBlank(message = "The description is mandatory")
+    @Pattern(regexp = "^(?!\\s*$).+", message = "The dish description cannot be empty")
     private String description;
 }

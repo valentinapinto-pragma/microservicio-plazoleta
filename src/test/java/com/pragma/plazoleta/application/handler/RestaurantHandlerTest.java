@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.application.handler;
 
 import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
+import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
 import com.pragma.plazoleta.application.mapper.RestaurantDtoMapper;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.servicePort.RestaurantServicePort;
@@ -11,6 +12,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,5 +60,27 @@ class RestaurantHandlerTest {
         // Assert
         verify(restaurantDtoMapper).toDomain(requestDto);
         verify(restaurantServicePort).createRestaurant(domainRestaurant);
+    }
+    @Test
+    @DisplayName("Should successfully get paged restaurants from service port and map to response DTOs")
+    void shouldGetRestaurantsSuccessfully() {
+        // Arrange
+        int page = 0;
+        int size = 5;
+        Restaurant domainRestaurant = new Restaurant(1L, "Restaurante La 80", "123456789", "Calle 10", "+573001234567", "https://logo.png", 2L);
+        RestaurantResponseDto responseDto = new RestaurantResponseDto("Restaurante La 80", "https://logo.png");
+
+        when(restaurantServicePort.getRestaurants(page, size)).thenReturn(List.of(domainRestaurant));
+        when(restaurantDtoMapper.toResponseDtoList(List.of(domainRestaurant))).thenReturn(List.of(responseDto));
+
+        // Act
+        List<RestaurantResponseDto> result = restaurantHandler.getRestaurants(page, size);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Restaurante La 80", result.get(0).getName());
+        verify(restaurantServicePort).getRestaurants(page, size);
+        verify(restaurantDtoMapper).toResponseDtoList(List.of(domainRestaurant));
     }
 }

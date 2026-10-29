@@ -11,6 +11,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -72,5 +77,20 @@ class RestaurantAdapterRepositoryTest {
 
         assertFalse(exists);
         verify(restaurantRepository).existsByNit("999999999");
+    }
+    @Test
+    @DisplayName("Should return paged restaurants sorted alphabetically by name")
+    void shouldReturnPagedRestaurantsSuccessfully() {
+        Page<RestaurantEntity> pageResult = new PageImpl<>(List.of(entity));
+        when(restaurantRepository.findAll(any(Pageable.class))).thenReturn(pageResult);
+        when(restaurantEntityMapper.toDomain(entity)).thenReturn(restaurant);
+
+        List<Restaurant> result = restaurantAdapterRepository.getRestaurants(0, 5);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(restaurant.getName(), result.get(0).getName());
+        verify(restaurantRepository).findAll(any(Pageable.class));
+        verify(restaurantEntityMapper).toDomain(entity);
     }
 }

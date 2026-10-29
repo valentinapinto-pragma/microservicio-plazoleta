@@ -6,6 +6,9 @@ import com.pragma.plazoleta.infrastructure.persistence.entity.RestaurantEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.RestaurantEntityMapper;
 import com.pragma.plazoleta.infrastructure.persistence.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -23,6 +26,15 @@ public class RestaurantAdapterRepository implements RestaurantPersistentPort {
     public Restaurant save(Restaurant restaurant) {
         RestaurantEntity entity = restaurantEntityMapper.toEntity(restaurant);
         return restaurantEntityMapper.toDomain(restaurantRepository.save(entity));
+    }
+
+    @Override
+    public List<Restaurant> getRestaurants(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+        return restaurantRepository.findAll(pageable)
+                .stream()
+                .map(restaurantEntityMapper::toDomain)
+                .collect(Collectors.toList());
     }
 
     @Override

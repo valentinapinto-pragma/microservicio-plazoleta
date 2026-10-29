@@ -1,8 +1,14 @@
 package com.pragma.plazoleta.infrastructure.exceptionhandler;
 
-import com.pragma.plazoleta.domain.exception.*;
+import com.pragma.plazoleta.domain.exception.DishNotFoundException;
+import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
+import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
+import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
+import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
+import com.pragma.plazoleta.domain.exception.UserNotOwnerOfRestaurantException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -56,5 +62,11 @@ public class ControllerAdvisor {
     public ResponseEntity<ErrorResponseDto> handleUserNotOwnerOfRestaurantException(UserNotOwnerOfRestaurantException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccessDeniedException(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponseDto("Access denied: You do not have permissions to perform this action"));
     }
 }

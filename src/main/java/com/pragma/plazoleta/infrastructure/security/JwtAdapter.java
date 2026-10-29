@@ -31,6 +31,15 @@ public class JwtAdapter {
         return Long.valueOf(claims.get("id").toString());
     }
 
+    public String extractUsername(String token) {
+        Claims claims = getClaims(token);
+        return claims != null ? claims.getSubject() : null;
+    }
+
+    public boolean validateToken(String token) {
+        return getClaims(token) != null;
+    }
+
     private Claims getClaims(String token) {
         try {
             if (token != null && token.startsWith("Bearer ")) {

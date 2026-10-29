@@ -2,6 +2,7 @@ package com.pragma.plazoleta.infrastructure.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
+import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
 import com.pragma.plazoleta.application.handler.RestaurantHandler;
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
@@ -17,8 +18,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -121,5 +125,34 @@ class RestaurantControllerTest {
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("The user specified as owner does not exist or does not possess the OWNER role"));
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK and list of restaurants when getRestaurants is called")
+    void shouldReturnOkAndRestaurantList() throws Exception {
+        RestaurantResponseDto responseDto = new RestaurantResponseDto("Crepes & Waffles", "https://logo.png");
+        when(restaurantHandler.getRestaurants(0, 10)).thenReturn(List.of(responseDto));
+
+        mockMvc.perform(get("/restaurants")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Crepes & Waffles"))
+                .andExpect(jsonPath("$[0].urlLogo").value("https://logo.png"));
+
+        verify(restaurantHandler).getRestaurants(0, 10);
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK with default pagination when parameters are omitted")
+    void shouldReturnOkWithDefaultPagination() throws Exception {
+        when(restaurantHandler.getRestaurants(0, 10)).thenReturn(List.of());
+
+        mockMvc.perform(get("/restaurants")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(restaurantHandler).getRestaurants(0, 10);
     }
 }

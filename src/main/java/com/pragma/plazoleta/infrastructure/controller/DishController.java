@@ -4,7 +4,6 @@ import com.pragma.plazoleta.application.dto.request.DishRequestDto;
 import com.pragma.plazoleta.application.dto.request.DishStatusRequestDto;
 import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
 import com.pragma.plazoleta.application.handler.DishHandler;
-import com.pragma.plazoleta.domain.model.RoleEnum;
 import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -13,7 +12,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
 
@@ -57,14 +63,11 @@ public class DishController {
             @ApiResponse(responseCode = "404", description = "Dish or restaurant not found", content = @Content)
     })
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<Void> changeDishStatus(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String token,
             @Valid @RequestBody DishStatusRequestDto dishStatusRequestDto) {
-
-        if (token == null || !RoleEnum.OWNER.getRoleName().equals(jwtAdapter.extractRole(token))) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
 
         Long ownerId = jwtAdapter.extractUserId(token);
         dishHandler.changeDishStatus(id, dishStatusRequestDto, ownerId);

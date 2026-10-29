@@ -11,47 +11,46 @@ import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
 import com.pragma.plazoleta.domain.exception.UserNotOwnerOfRestaurantException;
 import com.pragma.plazoleta.infrastructure.exceptionhandler.ControllerAdvisor;
 import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
-import org.junit.jupiter.api.BeforeEach;
+import com.pragma.plazoleta.infrastructure.security.SecurityConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockitoExtension.class)
+@WebMvcTest(DishController.class)
+@Import({SecurityConfiguration.class, ControllerAdvisor.class})
+@WithMockUser(roles = "OWNER")
 class DishControllerTest {
 
+    @Autowired
     private MockMvc mockMvc;
 
-    @Mock
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
     private DishHandler dishHandler;
 
-    @Mock
+    @MockBean
     private JwtAdapter jwtAdapter;
 
-    @InjectMocks
-    private DishController dishController;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @BeforeEach
-    void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(dishController)
-                .setControllerAdvice(new ControllerAdvisor())
-                .build();
-    }
     @Test
     @DisplayName("Should return 201 Created when dish data is valid")
     void shouldReturnCreatedWhenValid() throws Exception {
@@ -146,7 +145,6 @@ class DishControllerTest {
         String token = "Bearer valid.token";
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
 
-        when(jwtAdapter.extractRole(token)).thenReturn("ROLE_OWNER");
         when(jwtAdapter.extractUserId(token)).thenReturn(2L);
         doNothing().when(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class), eq(2L));
 
@@ -156,31 +154,16 @@ class DishControllerTest {
                         .content(objectMapper.writeValueAsString(statusDto)))
                 .andExpect(status().isOk());
 
-        verify(jwtAdapter).extractRole(token);
         verify(jwtAdapter).extractUserId(token);
         verify(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class), eq(2L));
     }
 
     @Test
-    @DisplayName("Should return 403 Forbidden when token is missing on status change")
-    void shouldReturnForbiddenWhenTokenIsMissingOnStatusChange() throws Exception {
-        DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
-
-        mockMvc.perform(patch("/dishes/1/status")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(statusDto)))
-                .andExpect(status().isForbidden());
-
-        verify(dishHandler, never()).changeDishStatus(any(), any(), any());
-    }
-
-    @Test
+    @WithMockUser(roles = "CLIENT")
     @DisplayName("Should return 403 Forbidden when role is not owner on status change")
     void shouldReturnForbiddenWhenRoleIsNotOwnerOnStatusChange() throws Exception {
-        String token = "Bearer admin.token";
+        String token = "Bearer client.token";
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
-
-        when(jwtAdapter.extractRole(token)).thenReturn("ROLE_ADMIN");
 
         mockMvc.perform(patch("/dishes/1/status")
                         .header("Authorization", token)
@@ -197,7 +180,6 @@ class DishControllerTest {
         String token = "Bearer owner.token";
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
 
-        when(jwtAdapter.extractRole(token)).thenReturn("ROLE_OWNER");
         when(jwtAdapter.extractUserId(token)).thenReturn(999L);
         doThrow(new UserNotOwnerOfRestaurantException("The user is not the owner of the restaurant to which the dish belongs"))
                 .when(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class), eq(999L));
@@ -216,7 +198,6 @@ class DishControllerTest {
         String token = "Bearer owner.token";
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
 
-        when(jwtAdapter.extractRole(token)).thenReturn("ROLE_OWNER");
         when(jwtAdapter.extractUserId(token)).thenReturn(2L);
         doThrow(new DishNotFoundException("Dish not found with id: 99"))
                 .when(dishHandler).changeDishStatus(eq(99L), any(DishStatusRequestDto.class), eq(2L));

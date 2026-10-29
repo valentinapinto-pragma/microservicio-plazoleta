@@ -7,9 +7,13 @@ import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserValidationPort;
 import com.pragma.plazoleta.domain.servicePort.RestaurantServicePort;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 public class RestaurantUseCase implements RestaurantServicePort {
+
+    private static final String INVALID_PAGE_MESSAGE = "The page number must be greater than or equal to 0";
+    private static final String INVALID_SIZE_MESSAGE = "The page size must be greater than 0";
 
     private static final Pattern ONLY_NUMBERS_PATTERN = Pattern.compile("^\\d+$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?\\d{1,13}$");
@@ -35,6 +39,21 @@ public class RestaurantUseCase implements RestaurantServicePort {
         validateOwner(restaurant.getIdOwner());
         validateNitNotDuplicated(restaurant.getNit());
         return restaurantPersistentPort.saveRestaurant(restaurant);
+    }
+
+    @Override
+    public List<Restaurant> getRestaurants(int page, int size) {
+        validatePagination(page, size);
+        return restaurantPersistentPort.getRestaurants(page, size);
+    }
+
+    private void validatePagination(int page, int size) {
+        if (page < 0) {
+            throw new InvalidRestaurantDataException(INVALID_PAGE_MESSAGE);
+        }
+        if (size <= 0) {
+            throw new InvalidRestaurantDataException(INVALID_SIZE_MESSAGE);
+        }
     }
 
     private void validateRestaurantData(Restaurant restaurant) {

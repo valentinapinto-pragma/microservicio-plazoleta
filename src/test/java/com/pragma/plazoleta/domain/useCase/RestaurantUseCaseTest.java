@@ -13,6 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -224,4 +226,43 @@ class RestaurantUseCaseTest {
         assertEquals("A restaurant with the provided NIT already exists", exception.getMessage());
         verify(restaurantPersistentPort, never()).saveRestaurant(any());
     }
+
+    @Test
+    @DisplayName("Should successfully return paged restaurants")
+    void shouldReturnPagedRestaurantsSuccessfully() {
+        int page = 0;
+        int size = 5;
+        List<Restaurant> mockRestaurants = List.of(validRestaurant);
+        when(restaurantPersistentPort.getRestaurants(page, size)).thenReturn(mockRestaurants);
+
+        List<Restaurant> result = restaurantUseCase.getRestaurants(page, size);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(validRestaurant.getName(), result.get(0).getName());
+        verify(restaurantPersistentPort).getRestaurants(page, size);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when page is negative")
+    void shouldThrowWhenPageIsNegative() {
+        InvalidRestaurantDataException exception = assertThrows(
+                InvalidRestaurantDataException.class,
+                () -> restaurantUseCase.getRestaurants(-1, 5)
+        );
+        assertEquals("The page number must be greater than or equal to 0", exception.getMessage());
+        verifyNoInteractions(restaurantPersistentPort);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when size is zero or negative")
+    void shouldThrowWhenSizeIsZeroOrNegative() {
+        InvalidRestaurantDataException exception = assertThrows(
+                InvalidRestaurantDataException.class,
+                () -> restaurantUseCase.getRestaurants(0, 0)
+        );
+        assertEquals("The page size must be greater than 0", exception.getMessage());
+        verifyNoInteractions(restaurantPersistentPort);
+    }
+
 }

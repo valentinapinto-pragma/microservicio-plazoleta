@@ -142,50 +142,41 @@ class DishControllerTest {
     @Test
     @DisplayName("Should return 200 OK when dish status is changed successfully by restaurant owner")
     void shouldReturnOkWhenDishStatusChangedSuccessfully() throws Exception {
-        String token = "Bearer valid.token";
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
 
-        when(jwtAdapter.extractUserId(token)).thenReturn(2L);
-        doNothing().when(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class), eq(2L));
+        doNothing().when(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class));
 
         mockMvc.perform(patch("/dishes/1/status")
-                        .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(statusDto)))
                 .andExpect(status().isOk());
 
-        verify(jwtAdapter).extractUserId(token);
-        verify(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class), eq(2L));
+        verify(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class));
     }
 
     @Test
     @WithMockUser(roles = "CLIENT")
     @DisplayName("Should return 403 Forbidden when role is not owner on status change")
     void shouldReturnForbiddenWhenRoleIsNotOwnerOnStatusChange() throws Exception {
-        String token = "Bearer client.token";
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
 
         mockMvc.perform(patch("/dishes/1/status")
-                        .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(statusDto)))
                 .andExpect(status().isForbidden());
 
-        verify(dishHandler, never()).changeDishStatus(any(), any(), any());
+        verify(dishHandler, never()).changeDishStatus(any(), any());
     }
 
     @Test
     @DisplayName("Should return 403 Forbidden when user is not the owner of the restaurant")
     void shouldReturnForbiddenWhenUserNotOwnerOfRestaurant() throws Exception {
-        String token = "Bearer owner.token";
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
 
-        when(jwtAdapter.extractUserId(token)).thenReturn(999L);
         doThrow(new UserNotOwnerOfRestaurantException("The user is not the owner of the restaurant to which the dish belongs"))
-                .when(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class), eq(999L));
+                .when(dishHandler).changeDishStatus(eq(1L), any(DishStatusRequestDto.class));
 
         mockMvc.perform(patch("/dishes/1/status")
-                        .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(statusDto)))
                 .andExpect(status().isForbidden())
@@ -195,15 +186,12 @@ class DishControllerTest {
     @Test
     @DisplayName("Should return 404 Not Found when dish to change status is not found")
     void shouldReturnNotFoundWhenDishToChangeStatusDoesNotExist() throws Exception {
-        String token = "Bearer owner.token";
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
 
-        when(jwtAdapter.extractUserId(token)).thenReturn(2L);
         doThrow(new DishNotFoundException("Dish not found with id: 99"))
-                .when(dishHandler).changeDishStatus(eq(99L), any(DishStatusRequestDto.class), eq(2L));
+                .when(dishHandler).changeDishStatus(eq(99L), any(DishStatusRequestDto.class));
 
         mockMvc.perform(patch("/dishes/99/status")
-                        .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(statusDto)))
                 .andExpect(status().isNotFound())

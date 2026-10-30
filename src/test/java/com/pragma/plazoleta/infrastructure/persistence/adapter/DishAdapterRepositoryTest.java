@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -58,6 +59,7 @@ class DishAdapterRepositoryTest {
         verify(dishRepository).save(entity);
         verify(dishEntityMapper).toDomain(entity);
     }
+
     @Test
     @DisplayName("Should find dish by id through repository and mapper")
     void shouldFindDishById() {
@@ -72,4 +74,44 @@ class DishAdapterRepositoryTest {
         verify(dishEntityMapper).toDomain(entity);
     }
 
+    @Test
+    @DisplayName("Should find all dishes through repository and mapper")
+    void shouldFindAllDishes() {
+        when(dishRepository.findAll()).thenReturn(List.of(entity));
+        when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
+
+        List<Dish> result = dishAdapterRepository.findAll();
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(dish.getName(), result.get(0).getName());
+        verify(dishRepository).findAll();
+        verify(dishEntityMapper).toDomain(entity);
+    }
+
+    @Test
+    @DisplayName("Should update dish successfully through repository and mapper")
+    void shouldUpdateDishSuccessfully() {
+        when(dishEntityMapper.toEntity(dish)).thenReturn(entity);
+        when(dishRepository.save(entity)).thenReturn(entity);
+        when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
+
+        Dish result = dishAdapterRepository.update(dish);
+
+        assertNotNull(result);
+        assertEquals(dish.getName(), result.getName());
+        verify(dishEntityMapper).toEntity(dish);
+        verify(dishRepository).save(entity);
+        verify(dishEntityMapper).toDomain(entity);
+    }
+
+    @Test
+    @DisplayName("Should delete dish by id through repository")
+    void shouldDeleteDishById() {
+        doNothing().when(dishRepository).deleteById(1L);
+
+        dishAdapterRepository.delete(1L);
+
+        verify(dishRepository).deleteById(1L);
+    }
 }

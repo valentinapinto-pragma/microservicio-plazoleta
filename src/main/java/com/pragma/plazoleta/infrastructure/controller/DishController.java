@@ -4,7 +4,6 @@ import com.pragma.plazoleta.application.dto.request.DishRequestDto;
 import com.pragma.plazoleta.application.dto.request.DishStatusRequestDto;
 import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
 import com.pragma.plazoleta.application.handler.DishHandler;
-import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,7 +27,6 @@ import javax.validation.Valid;
 public class DishController {
 
     private final DishHandler dishHandler;
-    private final JwtAdapter jwtAdapter;
 
     @Operation(summary = "Create a new dish", description = "Allows the owner to create a new dish for their restaurant")
     @ApiResponses(value = {
@@ -66,11 +63,8 @@ public class DishController {
     @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<Void> changeDishStatus(
             @PathVariable Long id,
-            @RequestHeader(value = "Authorization", required = false) String token,
             @Valid @RequestBody DishStatusRequestDto dishStatusRequestDto) {
-
-        Long ownerId = jwtAdapter.extractUserId(token);
-        dishHandler.changeDishStatus(id, dishStatusRequestDto, ownerId);
+        dishHandler.changeDishStatus(id, dishStatusRequestDto);
         return ResponseEntity.ok().build();
     }
 }

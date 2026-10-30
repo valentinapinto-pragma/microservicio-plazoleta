@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -48,7 +49,7 @@ class RestaurantAdapterRepositoryTest {
         when(restaurantRepository.save(entity)).thenReturn(entity);
         when(restaurantEntityMapper.toDomain(entity)).thenReturn(restaurant);
 
-        Restaurant result = restaurantAdapterRepository.saveRestaurant(restaurant);
+        Restaurant result = restaurantAdapterRepository.save(restaurant);
 
         assertNotNull(result);
         assertEquals(restaurant.getName(), result.getName());
@@ -78,6 +79,84 @@ class RestaurantAdapterRepositoryTest {
         assertFalse(exists);
         verify(restaurantRepository).existsByNit("999999999");
     }
+
+    @Test
+    @DisplayName("Should return true when restaurant exists by id")
+    void shouldReturnTrueWhenRestaurantExistsById() {
+        when(restaurantRepository.existsById(1L)).thenReturn(true);
+
+        boolean exists = restaurantAdapterRepository.existsById(1L);
+
+        assertTrue(exists);
+        verify(restaurantRepository).existsById(1L);
+    }
+
+    @Test
+    @DisplayName("Should return false when restaurant does not exist by id")
+    void shouldReturnFalseWhenRestaurantDoesNotExistById() {
+        when(restaurantRepository.existsById(99L)).thenReturn(false);
+
+        boolean exists = restaurantAdapterRepository.existsById(99L);
+
+        assertFalse(exists);
+        verify(restaurantRepository).existsById(99L);
+    }
+
+    @Test
+    @DisplayName("Should find restaurant by id through repository and mapper")
+    void shouldFindRestaurantById() {
+        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(entity));
+        when(restaurantEntityMapper.toDomain(entity)).thenReturn(restaurant);
+
+        Optional<Restaurant> result = restaurantAdapterRepository.findById(1L);
+
+        assertTrue(result.isPresent());
+        assertEquals(restaurant.getName(), result.get().getName());
+        verify(restaurantRepository).findById(1L);
+        verify(restaurantEntityMapper).toDomain(entity);
+    }
+
+    @Test
+    @DisplayName("Should find all restaurants through repository and mapper")
+    void shouldFindAllRestaurants() {
+        when(restaurantRepository.findAll()).thenReturn(List.of(entity));
+        when(restaurantEntityMapper.toDomain(entity)).thenReturn(restaurant);
+
+        List<Restaurant> result = restaurantAdapterRepository.findAll();
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(restaurant.getName(), result.get(0).getName());
+        verify(restaurantRepository).findAll();
+        verify(restaurantEntityMapper).toDomain(entity);
+    }
+
+    @Test
+    @DisplayName("Should update restaurant successfully through repository and mapper")
+    void shouldUpdateRestaurantSuccessfully() {
+        when(restaurantEntityMapper.toEntity(restaurant)).thenReturn(entity);
+        when(restaurantRepository.save(entity)).thenReturn(entity);
+        when(restaurantEntityMapper.toDomain(entity)).thenReturn(restaurant);
+
+        Restaurant result = restaurantAdapterRepository.update(restaurant);
+
+        assertNotNull(result);
+        assertEquals(restaurant.getName(), result.getName());
+        verify(restaurantEntityMapper).toEntity(restaurant);
+        verify(restaurantRepository).save(entity);
+        verify(restaurantEntityMapper).toDomain(entity);
+    }
+
+    @Test
+    @DisplayName("Should delete restaurant by id through repository")
+    void shouldDeleteRestaurantById() {
+        doNothing().when(restaurantRepository).deleteById(1L);
+
+        restaurantAdapterRepository.delete(1L);
+
+        verify(restaurantRepository).deleteById(1L);
+    }
+
     @Test
     @DisplayName("Should return paged restaurants sorted alphabetically by name")
     void shouldReturnPagedRestaurantsSuccessfully() {

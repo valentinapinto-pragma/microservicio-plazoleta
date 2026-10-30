@@ -8,12 +8,12 @@ import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
 
 public class DishUseCase implements DishServicePort {
 
     private static final String AT_LEAST_ONE_FIELD_MESSAGE = "At least one field must be provided for update";
-
     private static final String INVALID_PRICE_MESSAGE = "The dish price must be an integer greater than 0";
     private static final String INVALID_DESCRIPTION_MESSAGE = "The dish description cannot be empty";
     private static final String INVALID_RESTAURANT_MESSAGE = "The restaurant associated with the dish does not exist";
@@ -24,10 +24,14 @@ public class DishUseCase implements DishServicePort {
 
     private final DishPersistentPort dishPersistentPort;
     private final RestaurantPersistentPort restaurantPersistentPort;
+    private final UserInformationPort userInformationPort;
 
-    public DishUseCase(DishPersistentPort dishPersistentPort, RestaurantPersistentPort restaurantPersistentPort) {
+    public DishUseCase(DishPersistentPort dishPersistentPort,
+                       RestaurantPersistentPort restaurantPersistentPort,
+                       UserInformationPort userInformationPort) {
         this.dishPersistentPort = dishPersistentPort;
         this.restaurantPersistentPort = restaurantPersistentPort;
+        this.userInformationPort = userInformationPort;
     }
 
     @Override
@@ -41,12 +45,10 @@ public class DishUseCase implements DishServicePort {
 
     @Override
     public Dish updateDish(Long id, Integer price, String description) {
-        // 1. Regla de negocio: Al menos un campo debe estar presente
         if (price == null && (description == null || description.trim().isEmpty())) {
             throw new InvalidDishDataException(AT_LEAST_ONE_FIELD_MESSAGE);
         }
 
-        // 2. Validaciones condicionales (Fail-Fast antes de ir a BD)
         if (price != null) {
             validatePrice(price);
         }
@@ -54,11 +56,9 @@ public class DishUseCase implements DishServicePort {
             validateDescription(description);
         }
 
-        // 3. Buscar el plato existente (o lanzar 404)
         Dish dish = dishPersistentPort.findById(id)
                 .orElseThrow(() -> new DishNotFoundException(DISH_NOT_FOUND_MESSAGE + id));
 
-        // 4. Actualizar únicamente el campo que fue enviado
         if (price != null) {
             dish.setPrice(price);
         }
@@ -70,10 +70,12 @@ public class DishUseCase implements DishServicePort {
     }
 
     @Override
-    public Dish changeDishStatus(Long id, Boolean active, Long ownerId) {
+    public Dish changeDishStatus(Long id, Boolean active) {
         if (active == null) {
             throw new InvalidDishDataException(INVALID_STATUS_MESSAGE);
         }
+
+        Long ownerId = userInformationPort.getAuthenticatedUserId();
 
         Dish dish = dishPersistentPort.findById(id)
                 .orElseThrow(() -> new DishNotFoundException(DISH_NOT_FOUND_MESSAGE + id));

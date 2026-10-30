@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.domain.repositoryPort;
 
-public interface UserValidationPort {
+public interface UserInformationPort {
     boolean isValidOwner(Long ownerId);
+    Long getAuthenticatedUserId();
 }

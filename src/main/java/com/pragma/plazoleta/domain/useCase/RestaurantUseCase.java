@@ -4,7 +4,7 @@ import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
-import com.pragma.plazoleta.domain.repositoryPort.UserValidationPort;
+import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.domain.servicePort.RestaurantServicePort;
 
 import java.util.List;
@@ -26,11 +26,11 @@ public class RestaurantUseCase implements RestaurantServicePort {
     private static final String INVALID_OWNER_MESSAGE = "The user specified as owner does not exist or does not possess the OWNER role";
 
     private final RestaurantPersistentPort restaurantPersistentPort;
-    private final UserValidationPort userValidationPort;
+    private final UserInformationPort userInformationPort;
 
-    public RestaurantUseCase(RestaurantPersistentPort restaurantPersistentPort, UserValidationPort userValidationPort) {
+    public RestaurantUseCase(RestaurantPersistentPort restaurantPersistentPort, UserInformationPort userInformationPort) {
         this.restaurantPersistentPort = restaurantPersistentPort;
-        this.userValidationPort = userValidationPort;
+        this.userInformationPort = userInformationPort;
     }
 
     @Override
@@ -81,7 +81,7 @@ public class RestaurantUseCase implements RestaurantServicePort {
     }
 
     private void validateOwner(Long ownerId) {
-        if (ownerId == null || !userValidationPort.isValidOwner(ownerId)) {
+        if (ownerId == null || !userInformationPort.isValidOwner(ownerId)) {
             throw new OwnerNotValidException(INVALID_OWNER_MESSAGE);
         }
     }

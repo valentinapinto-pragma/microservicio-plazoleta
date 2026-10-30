@@ -5,5 +5,5 @@ import com.pragma.plazoleta.domain.model.Dish;
 public interface DishServicePort {
     Dish createDish(Dish dish);
     Dish updateDish(Long id, Integer price, String description);
-    Dish changeDishStatus(Long id, Boolean active, Long ownerId);
+    Dish changeDishStatus(Long id, Boolean active);
 }

@@ -4,7 +4,7 @@ import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
-import com.pragma.plazoleta.domain.repositoryPort.UserValidationPort;
+import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ class RestaurantUseCaseTest {
     private RestaurantPersistentPort restaurantPersistentPort;
 
     @Mock
-    private UserValidationPort userValidationPort;
+    private UserInformationPort userInformationPort;
 
     @InjectMocks
     private RestaurantUseCase restaurantUseCase;
@@ -49,7 +49,7 @@ class RestaurantUseCaseTest {
     @DisplayName("Should successfully create restaurant when data is valid and owner exists")
     void shouldCreateRestaurantWhenDataIsValid() {
         // Arrange
-        when(userValidationPort.isValidOwner(2L)).thenReturn(true);
+        when(userInformationPort.isValidOwner(2L)).thenReturn(true);
         when(restaurantPersistentPort.existsByNit("123456789")).thenReturn(false);
         when(restaurantPersistentPort.saveRestaurant(validRestaurant)).thenReturn(validRestaurant);
 
@@ -59,7 +59,7 @@ class RestaurantUseCaseTest {
         // Assert
         assertNotNull(result);
         assertEquals(validRestaurant.getName(), result.getName());
-        verify(userValidationPort).isValidOwner(2L);
+        verify(userInformationPort).isValidOwner(2L);
         verify(restaurantPersistentPort).existsByNit("123456789");
         verify(restaurantPersistentPort).saveRestaurant(validRestaurant);
     }
@@ -69,7 +69,7 @@ class RestaurantUseCaseTest {
     void shouldCreateRestaurantWhenPhoneHasNoPlusSign() {
         // Arrange
         validRestaurant.setPhone("573001234567");
-        when(userValidationPort.isValidOwner(2L)).thenReturn(true);
+        when(userInformationPort.isValidOwner(2L)).thenReturn(true);
         when(restaurantPersistentPort.existsByNit("123456789")).thenReturn(false);
         when(restaurantPersistentPort.saveRestaurant(validRestaurant)).thenReturn(validRestaurant);
 
@@ -93,7 +93,7 @@ class RestaurantUseCaseTest {
                 () -> restaurantUseCase.createRestaurant(validRestaurant)
         );
         assertEquals("The restaurant name cannot consist solely of numbers", exception.getMessage());
-        verifyNoInteractions(userValidationPort, restaurantPersistentPort);
+        verifyNoInteractions(userInformationPort, restaurantPersistentPort);
     }
 
     @Test
@@ -108,7 +108,7 @@ class RestaurantUseCaseTest {
                 () -> restaurantUseCase.createRestaurant(validRestaurant)
         );
         assertEquals("The restaurant name cannot consist solely of numbers", exception.getMessage());
-        verifyNoInteractions(userValidationPort, restaurantPersistentPort);
+        verifyNoInteractions(userInformationPort, restaurantPersistentPort);
     }
 
     @Test
@@ -199,7 +199,7 @@ class RestaurantUseCaseTest {
     @DisplayName("Should throw exception when owner validation returns false")
     void shouldThrowWhenOwnerIsNotValid() {
         // Arrange
-        when(userValidationPort.isValidOwner(2L)).thenReturn(false);
+        when(userInformationPort.isValidOwner(2L)).thenReturn(false);
 
         // Act & Assert
         OwnerNotValidException exception = assertThrows(
@@ -207,7 +207,7 @@ class RestaurantUseCaseTest {
                 () -> restaurantUseCase.createRestaurant(validRestaurant)
         );
         assertEquals("The user specified as owner does not exist or does not possess the OWNER role", exception.getMessage());
-        verify(userValidationPort).isValidOwner(2L);
+        verify(userInformationPort).isValidOwner(2L);
         verify(restaurantPersistentPort, never()).saveRestaurant(any());
     }
 
@@ -215,7 +215,7 @@ class RestaurantUseCaseTest {
     @DisplayName("Should throw exception when NIT already exists")
     void shouldThrowWhenNitAlreadyExists() {
         // Arrange
-        when(userValidationPort.isValidOwner(2L)).thenReturn(true);
+        when(userInformationPort.isValidOwner(2L)).thenReturn(true);
         when(restaurantPersistentPort.existsByNit("123456789")).thenReturn(true);
 
         // Act & Assert

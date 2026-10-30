@@ -9,6 +9,7 @@ import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class DishUseCaseTest {
 
     @Mock
     private RestaurantPersistentPort restaurantPersistentPort;
+
+    @Mock
+    private UserInformationPort userInformationPort;
 
     @InjectMocks
     private DishUseCase dishUseCase;
@@ -108,60 +112,50 @@ class DishUseCaseTest {
     }
 
     @Test
-    @DisplayName("Should successfully update dish price and description")
-    void shouldUpdateDishSuccessfully() {
-        Integer newPrice = 30000;
-        String newDescription = "Bandeja paisa extra grande con chicharron crocante";
-
+    @DisplayName("Should successfully update price and description")
+    void shouldUpdateDishPriceAndDescriptionSuccessfully() {
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
-        when(dishPersistentPort.save(validDish)).thenReturn(validDish);
+        when(dishPersistentPort.save(any(Dish.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Dish result = dishUseCase.updateDish(1L, newPrice, newDescription);
+        Dish result = dishUseCase.updateDish(1L, 30000, "Nueva descripcion deliciosa");
 
         assertNotNull(result);
-        assertEquals(newPrice, result.getPrice());
-        assertEquals(newDescription, result.getDescription());
-        verify(dishPersistentPort).findById(1L);
-        verify(dishPersistentPort).save(validDish);
-    }
-
-    @Test
-    @DisplayName("Should successfully update only description when price is null")
-    void shouldUpdateOnlyDescriptionSuccessfully() {
-        String newDescription = "Bandeja paisa extra grande con chicharron crocante";
-
-        when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
-        when(dishPersistentPort.save(validDish)).thenReturn(validDish);
-
-        Dish result = dishUseCase.updateDish(1L, null, newDescription);
-
-        assertNotNull(result);
-        assertEquals(25000, result.getPrice()); // El precio se mantuvo original
-        assertEquals(newDescription, result.getDescription());
+        assertEquals(30000, result.getPrice());
+        assertEquals("Nueva descripcion deliciosa", result.getDescription());
         verify(dishPersistentPort).findById(1L);
         verify(dishPersistentPort).save(validDish);
     }
 
     @Test
     @DisplayName("Should successfully update only price when description is null")
-    void shouldUpdateOnlyPriceSuccessfully() {
-        Integer newPrice = 30000;
-        String originalDescription = validDish.getDescription();
-
+    void shouldUpdateDishOnlyPriceSuccessfully() {
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
-        when(dishPersistentPort.save(validDish)).thenReturn(validDish);
+        when(dishPersistentPort.save(any(Dish.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Dish result = dishUseCase.updateDish(1L, newPrice, null);
+        Dish result = dishUseCase.updateDish(1L, 30000, null);
 
         assertNotNull(result);
-        assertEquals(newPrice, result.getPrice());
-        assertEquals(originalDescription, result.getDescription()); // La descripción se mantuvo original
-        verify(dishPersistentPort).findById(1L);
+        assertEquals(30000, result.getPrice());
+        assertEquals("Frijoles, arroz, carne molida", result.getDescription());
         verify(dishPersistentPort).save(validDish);
     }
 
     @Test
-    @DisplayName("Should throw exception when both price and description are null")
+    @DisplayName("Should successfully update only description when price is null")
+    void shouldUpdateDishOnlyDescriptionSuccessfully() {
+        when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
+        when(dishPersistentPort.save(any(Dish.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Dish result = dishUseCase.updateDish(1L, null, "Solo descripcion cambiada");
+
+        assertNotNull(result);
+        assertEquals(25000, result.getPrice());
+        assertEquals("Solo descripcion cambiada", result.getDescription());
+        verify(dishPersistentPort).save(validDish);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when both price and description are null on update")
     void shouldThrowWhenBothPriceAndDescriptionAreNull() {
         InvalidDishDataException exception = assertThrows(
                 InvalidDishDataException.class,
@@ -172,29 +166,40 @@ class DishUseCaseTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when update price is zero or negative")
+    @DisplayName("Should throw exception when both price is null and description is empty")
+    void shouldThrowWhenPriceIsNullAndDescriptionIsEmpty() {
+        InvalidDishDataException exception = assertThrows(
+                InvalidDishDataException.class,
+                () -> dishUseCase.updateDish(1L, null, "   ")
+        );
+        assertEquals("At least one field must be provided for update", exception.getMessage());
+        verify(dishPersistentPort, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when updating price with zero or negative")
     void shouldThrowWhenUpdatePriceIsZeroOrNegative() {
         InvalidDishDataException exception = assertThrows(
                 InvalidDishDataException.class,
-                () -> dishUseCase.updateDish(1L, -1000, "Nueva descripcion")
+                () -> dishUseCase.updateDish(1L, 0, "Valida")
         );
         assertEquals("The dish price must be an integer greater than 0", exception.getMessage());
         verify(dishPersistentPort, never()).findById(any());
     }
 
     @Test
-    @DisplayName("Should throw exception when update description is blank")
-    void shouldThrowWhenUpdateDescriptionIsBlank() {
+    @DisplayName("Should throw exception when updating description with empty string")
+    void shouldThrowWhenUpdateDescriptionIsEmpty() {
         InvalidDishDataException exception = assertThrows(
                 InvalidDishDataException.class,
-                () -> dishUseCase.updateDish(1L, 25000, "    ")
+                () -> dishUseCase.updateDish(1L, 30000, "  ")
         );
         assertEquals("The dish description cannot be empty", exception.getMessage());
         verify(dishPersistentPort, never()).findById(any());
     }
 
     @Test
-    @DisplayName("Should throw exception when dish to update does not exist")
+    @DisplayName("Should throw exception when dish to update is not found")
     void shouldThrowWhenDishToUpdateNotFound() {
         when(dishPersistentPort.findById(99L)).thenReturn(Optional.empty());
 
@@ -210,15 +215,16 @@ class DishUseCaseTest {
     @Test
     @DisplayName("Should successfully disable dish when user is the restaurant owner")
     void shouldDisableDishSuccessfullyWhenUserIsOwner() {
-        Long ownerId = 2L;
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
         when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
         when(dishPersistentPort.save(validDish)).thenReturn(validDish);
 
-        Dish result = dishUseCase.changeDishStatus(1L, false, ownerId);
+        Dish result = dishUseCase.changeDishStatus(1L, false);
 
         assertNotNull(result);
         assertFalse(result.getActive());
+        verify(userInformationPort).getAuthenticatedUserId();
         verify(dishPersistentPort).findById(1L);
         verify(restaurantPersistentPort).findById(1L);
         verify(dishPersistentPort).save(validDish);
@@ -227,17 +233,18 @@ class DishUseCaseTest {
     @Test
     @DisplayName("Should successfully enable dish when user is the restaurant owner")
     void shouldEnableDishSuccessfullyWhenUserIsOwner() {
-        Long ownerId = 2L;
         validDish.setActive(false);
 
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
         when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
         when(dishPersistentPort.save(validDish)).thenReturn(validDish);
 
-        Dish result = dishUseCase.changeDishStatus(1L, true, ownerId);
+        Dish result = dishUseCase.changeDishStatus(1L, true);
 
         assertNotNull(result);
         assertTrue(result.getActive());
+        verify(userInformationPort).getAuthenticatedUserId();
         verify(dishPersistentPort).save(validDish);
     }
 
@@ -246,7 +253,7 @@ class DishUseCaseTest {
     void shouldThrowWhenActiveStatusIsNull() {
         InvalidDishDataException exception = assertThrows(
                 InvalidDishDataException.class,
-                () -> dishUseCase.changeDishStatus(1L, null, 2L)
+                () -> dishUseCase.changeDishStatus(1L, null)
         );
         assertEquals("The active status cannot be null", exception.getMessage());
         verify(dishPersistentPort, never()).findById(any());
@@ -255,11 +262,12 @@ class DishUseCaseTest {
     @Test
     @DisplayName("Should throw exception when dish to change status is not found")
     void shouldThrowWhenDishNotFoundOnStatusChange() {
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.findById(99L)).thenReturn(Optional.empty());
 
         DishNotFoundException exception = assertThrows(
                 DishNotFoundException.class,
-                () -> dishUseCase.changeDishStatus(99L, false, 2L)
+                () -> dishUseCase.changeDishStatus(99L, false)
         );
         assertEquals("Dish not found with id: 99", exception.getMessage());
         verify(restaurantPersistentPort, never()).findById(any());
@@ -268,12 +276,13 @@ class DishUseCaseTest {
     @Test
     @DisplayName("Should throw exception when restaurant of dish is not found")
     void shouldThrowWhenRestaurantNotFoundOnStatusChange() {
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
         when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.empty());
 
         RestaurantNotFoundException exception = assertThrows(
                 RestaurantNotFoundException.class,
-                () -> dishUseCase.changeDishStatus(1L, false, 2L)
+                () -> dishUseCase.changeDishStatus(1L, false)
         );
         assertEquals("The restaurant associated with the dish does not exist", exception.getMessage());
         verify(dishPersistentPort, never()).save(any());
@@ -284,12 +293,13 @@ class DishUseCaseTest {
     void shouldThrowWhenUserIsNotRestaurantOwner() {
         Long impostorOwnerId = 999L;
 
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(impostorOwnerId);
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
         when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
 
         UserNotOwnerOfRestaurantException exception = assertThrows(
                 UserNotOwnerOfRestaurantException.class,
-                () -> dishUseCase.changeDishStatus(1L, false, impostorOwnerId)
+                () -> dishUseCase.changeDishStatus(1L, false)
         );
         assertEquals("The user is not the owner of the restaurant to which the dish belongs", exception.getMessage());
         verify(dishPersistentPort, never()).save(any());

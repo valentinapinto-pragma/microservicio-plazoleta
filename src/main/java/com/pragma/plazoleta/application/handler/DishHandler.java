@@ -23,7 +23,7 @@ public class DishHandler {
         dishServicePort.updateDish(id, updateDishRequestDto.getPrice(), updateDishRequestDto.getDescription());
     }
 
-    public void changeDishStatus(Long id, DishStatusRequestDto dishStatusRequestDto, Long ownerId) {
-        dishServicePort.changeDishStatus(id, dishStatusRequestDto.getActive(), ownerId);
+    public void changeDishStatus(Long id, DishStatusRequestDto dishStatusRequestDto) {
+        dishServicePort.changeDishStatus(id, dishStatusRequestDto.getActive());
     }
 }

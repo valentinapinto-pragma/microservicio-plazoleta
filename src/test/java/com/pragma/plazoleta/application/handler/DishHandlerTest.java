@@ -57,10 +57,9 @@ class DishHandlerTest {
     void shouldChangeDishStatusSuccessfully() {
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
         Long dishId = 1L;
-        Long ownerId = 2L;
 
-        dishHandler.changeDishStatus(dishId, statusDto, ownerId);
+        dishHandler.changeDishStatus(dishId, statusDto);
 
-        verify(dishServicePort).changeDishStatus(dishId, false, ownerId);
+        verify(dishServicePort).changeDishStatus(dishId, false);
     }
 }

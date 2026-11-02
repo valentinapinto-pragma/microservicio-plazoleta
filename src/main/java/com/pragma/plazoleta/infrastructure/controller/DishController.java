@@ -31,9 +31,11 @@ public class DishController {
     @Operation(summary = "Create a new dish", description = "Allows the owner to create a new dish for their restaurant")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Dish created successfully", content = @Content),
-            @ApiResponse(responseCode = "400", description = "Invalid input data or restaurant not found", content = @Content)
+            @ApiResponse(responseCode = "400", description = "Invalid input data or restaurant not found", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden: User is not authorized or not the restaurant owner", content = @Content)
     })
     @PostMapping
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<Void> createDish(@Valid @RequestBody DishRequestDto dishRequestDto) {
         dishHandler.createDish(dishRequestDto);
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -43,9 +45,11 @@ public class DishController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Dish updated successfully", content = @Content),
             @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden: User is not authorized or not the restaurant owner", content = @Content),
             @ApiResponse(responseCode = "404", description = "Dish not found", content = @Content)
     })
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<Void> updateDish(@PathVariable Long id,
                                            @Valid @RequestBody UpdateDishRequestDto updateDishRequestDto) {
         dishHandler.updateDish(id, updateDishRequestDto);
@@ -60,7 +64,7 @@ public class DishController {
             @ApiResponse(responseCode = "404", description = "Dish or restaurant not found", content = @Content)
     })
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('OWNER')")
+    @PreAuthorize("hasRole('OWNER')") //delegar val de rol a spring
     public ResponseEntity<Void> changeDishStatus(
             @PathVariable Long id,
             @Valid @RequestBody DishStatusRequestDto dishStatusRequestDto) {

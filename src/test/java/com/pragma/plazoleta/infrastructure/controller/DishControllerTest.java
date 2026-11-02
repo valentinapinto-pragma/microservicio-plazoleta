@@ -28,7 +28,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -52,7 +51,7 @@ class DishControllerTest {
     private JwtAdapter jwtAdapter;
 
     @Test
-    @DisplayName("Should return 201 Created when dish data is valid")
+    @DisplayName("Should return 201 Created when dish data is valid and user is owner")
     void shouldReturnCreatedWhenValid() throws Exception {
         DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", 1L, 1L);
 
@@ -67,7 +66,21 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 Bad Request when validation fails")
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 403 Forbidden when client tries to create dish")
+    void shouldReturnForbiddenWhenClientCreatesDish() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Carne", "https://img.com/burger.png", 1L, 1L);
+
+        mockMvc.perform(post("/dishes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isForbidden());
+
+        verify(dishHandler, never()).createDish(any());
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when validation fails on create")
     void shouldReturnBadRequestWhenValidationFails() throws Exception {
         DishRequestDto invalidDto = new DishRequestDto();
 
@@ -80,7 +93,7 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 Bad Request when restaurant does not exist")
+    @DisplayName("Should return 400 Bad Request when restaurant does not exist on create")
     void shouldReturnBadRequestWhenRestaurantNotFound() throws Exception {
         DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Carne", "https://img.com/burger.png", 1L, 999L);
 
@@ -95,24 +108,24 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 Bad Request when price or data is invalid")
-    void shouldReturnBadRequestWhenInvalidDishData() throws Exception {
+    @DisplayName("Should return 403 Forbidden when user is not owner of restaurant on create")
+    void shouldReturnForbiddenWhenNotOwnerOnCreate() throws Exception {
         DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Carne", "https://img.com/burger.png", 1L, 1L);
 
-        doThrow(new InvalidDishDataException("The dish price must be an integer greater than 0"))
+        doThrow(new UserNotOwnerOfRestaurantException("The user is not the owner of the restaurant to which the dish belongs"))
                 .when(dishHandler).createDish(any(DishRequestDto.class));
 
         mockMvc.perform(post("/dishes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("The dish price must be an integer greater than 0"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("The user is not the owner of the restaurant to which the dish belongs"));
     }
 
     @Test
-    @DisplayName("Should return 200 OK when dish is updated successfully")
+    @DisplayName("Should return 200 OK when dish is updated successfully by owner")
     void shouldReturnOkWhenDishUpdated() throws Exception {
-        UpdateDishRequestDto updateDto = new UpdateDishRequestDto(32000, "Nueva descripcion");
+        UpdateDishRequestDto updateDto = new UpdateDishRequestDto(20000, "Nueva descripcion");
 
         doNothing().when(dishHandler).updateDish(eq(1L), any(UpdateDishRequestDto.class));
 
@@ -125,9 +138,23 @@ class DishControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 403 Forbidden when client tries to update dish")
+    void shouldReturnForbiddenWhenClientUpdatesDish() throws Exception {
+        UpdateDishRequestDto updateDto = new UpdateDishRequestDto(20000, "Nueva descripcion");
+
+        mockMvc.perform(patch("/dishes/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isForbidden());
+
+        verify(dishHandler, never()).updateDish(any(), any());
+    }
+
+    @Test
     @DisplayName("Should return 404 Not Found when dish to update does not exist")
     void shouldReturnNotFoundWhenDishToUpdateDoesNotExist() throws Exception {
-        UpdateDishRequestDto updateDto = new UpdateDishRequestDto(32000, "Nueva descripcion");
+        UpdateDishRequestDto updateDto = new UpdateDishRequestDto(20000, "Nueva descripcion");
 
         doThrow(new DishNotFoundException("Dish not found with id: 99"))
                 .when(dishHandler).updateDish(eq(99L), any(UpdateDishRequestDto.class));
@@ -137,6 +164,21 @@ class DishControllerTest {
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Dish not found with id: 99"));
+    }
+
+    @Test
+    @DisplayName("Should return 403 Forbidden when user is not owner of restaurant on update")
+    void shouldReturnForbiddenWhenNotOwnerOnUpdate() throws Exception {
+        UpdateDishRequestDto updateDto = new UpdateDishRequestDto(20000, "Nueva descripcion");
+
+        doThrow(new UserNotOwnerOfRestaurantException("The user is not the owner of the restaurant to which the dish belongs"))
+                .when(dishHandler).updateDish(eq(1L), any(UpdateDishRequestDto.class));
+
+        mockMvc.perform(patch("/dishes/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("The user is not the owner of the restaurant to which the dish belongs"));
     }
 
     @Test
@@ -169,7 +211,7 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 403 Forbidden when user is not the owner of the restaurant")
+    @DisplayName("Should return 403 Forbidden when user is not the owner of the restaurant on status change")
     void shouldReturnForbiddenWhenUserNotOwnerOfRestaurant() throws Exception {
         DishStatusRequestDto statusDto = new DishStatusRequestDto(false);
 

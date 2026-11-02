@@ -38,7 +38,7 @@ public class DishUseCase implements DishServicePort {
     public Dish createDish(Dish dish) {
         validatePrice(dish.getPrice());
         validateCategory(dish);
-        validateRestaurantExists(dish.getIdRestaurant());
+        validateRestaurantOwner(dish.getIdRestaurant());
         dish.setActive(Boolean.TRUE);
         return dishPersistentPort.save(dish);
     }
@@ -59,6 +59,8 @@ public class DishUseCase implements DishServicePort {
         Dish dish = dishPersistentPort.findById(id)
                 .orElseThrow(() -> new DishNotFoundException(DISH_NOT_FOUND_MESSAGE + id));
 
+        validateRestaurantOwner(dish.getIdRestaurant());
+
         if (price != null) {
             dish.setPrice(price);
         }
@@ -75,20 +77,27 @@ public class DishUseCase implements DishServicePort {
             throw new InvalidDishDataException(INVALID_STATUS_MESSAGE);
         }
 
-        Long ownerId = userInformationPort.getAuthenticatedUserId();
-
         Dish dish = dishPersistentPort.findById(id)
                 .orElseThrow(() -> new DishNotFoundException(DISH_NOT_FOUND_MESSAGE + id));
 
-        Restaurant restaurant = restaurantPersistentPort.findById(dish.getIdRestaurant())
-                .orElseThrow(() -> new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE));
-
-        if (ownerId == null || !restaurant.getIdOwner().equals(ownerId)) {
-            throw new UserNotOwnerOfRestaurantException(NOT_OWNER_MESSAGE);
-        }
+        validateRestaurantOwner(dish.getIdRestaurant());
 
         dish.setActive(active);
         return dishPersistentPort.save(dish);
+    }
+
+    private void validateRestaurantOwner(Long idRestaurant) {
+        if (idRestaurant == null) {
+            throw new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE);
+        }
+
+        Restaurant restaurant = restaurantPersistentPort.findById(idRestaurant)
+                .orElseThrow(() -> new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE));
+
+        Long ownerId = userInformationPort.getAuthenticatedUserId();
+        if (ownerId == null || !restaurant.getIdOwner().equals(ownerId)) {
+            throw new UserNotOwnerOfRestaurantException(NOT_OWNER_MESSAGE);
+        }
     }
 
     private void validatePrice(Integer price) {
@@ -106,12 +115,6 @@ public class DishUseCase implements DishServicePort {
     private void validateCategory(Dish dish) {
         if (dish.getCategory() == null || dish.getCategory().getId() == null) {
             throw new InvalidDishDataException(INVALID_CATEGORY_MESSAGE);
-        }
-    }
-
-    private void validateRestaurantExists(Long idRestaurant) {
-        if (idRestaurant == null || !restaurantPersistentPort.existsById(idRestaurant)) {
-            throw new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE);
         }
     }
 }

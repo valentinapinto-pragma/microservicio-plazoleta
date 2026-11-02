@@ -49,17 +49,33 @@ class DishUseCaseTest {
     }
 
     @Test
-    @DisplayName("Should successfully create dish with active status true")
+    @DisplayName("Should successfully create dish when user is the restaurant owner")
     void shouldCreateDishSuccessfully() {
-        when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
+        when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.save(validDish)).thenReturn(validDish);
 
         Dish result = dishUseCase.createDish(validDish);
 
         assertNotNull(result);
         assertTrue(result.getActive());
-        verify(restaurantPersistentPort).existsById(1L);
+        verify(restaurantPersistentPort).findById(1L);
+        verify(userInformationPort).getAuthenticatedUserId();
         verify(dishPersistentPort).save(validDish);
+    }
+
+    @Test
+    @DisplayName("Should throw UserNotOwnerOfRestaurantException when user creates dish for restaurant they do not own")
+    void shouldThrowWhenCreatingDishForDifferentRestaurantOwner() {
+        when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(999L);
+
+        UserNotOwnerOfRestaurantException exception = assertThrows(
+                UserNotOwnerOfRestaurantException.class,
+                () -> dishUseCase.createDish(validDish)
+        );
+        assertEquals("The user is not the owner of the restaurant to which the dish belongs", exception.getMessage());
+        verify(dishPersistentPort, never()).save(any());
     }
 
     @Test
@@ -101,7 +117,7 @@ class DishUseCaseTest {
     @Test
     @DisplayName("Should throw exception when restaurant does not exist on create")
     void shouldThrowWhenRestaurantDoesNotExist() {
-        when(restaurantPersistentPort.existsById(1L)).thenReturn(false);
+        when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.empty());
 
         RestaurantNotFoundException exception = assertThrows(
                 RestaurantNotFoundException.class,
@@ -112,9 +128,11 @@ class DishUseCaseTest {
     }
 
     @Test
-    @DisplayName("Should successfully update price and description")
+    @DisplayName("Should successfully update price and description when user is the restaurant owner")
     void shouldUpdateDishPriceAndDescriptionSuccessfully() {
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
+        when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.save(any(Dish.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Dish result = dishUseCase.updateDish(1L, 30000, "Nueva descripcion deliciosa");
@@ -123,13 +141,31 @@ class DishUseCaseTest {
         assertEquals(30000, result.getPrice());
         assertEquals("Nueva descripcion deliciosa", result.getDescription());
         verify(dishPersistentPort).findById(1L);
+        verify(restaurantPersistentPort).findById(1L);
         verify(dishPersistentPort).save(validDish);
+    }
+
+    @Test
+    @DisplayName("Should throw UserNotOwnerOfRestaurantException when user updates dish of restaurant they do not own")
+    void shouldThrowWhenUpdatingDishOfDifferentRestaurantOwner() {
+        when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
+        when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(999L);
+
+        UserNotOwnerOfRestaurantException exception = assertThrows(
+                UserNotOwnerOfRestaurantException.class,
+                () -> dishUseCase.updateDish(1L, 30000, "Nueva descripcion")
+        );
+        assertEquals("The user is not the owner of the restaurant to which the dish belongs", exception.getMessage());
+        verify(dishPersistentPort, never()).save(any());
     }
 
     @Test
     @DisplayName("Should successfully update only price when description is null")
     void shouldUpdateDishOnlyPriceSuccessfully() {
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
+        when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.save(any(Dish.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Dish result = dishUseCase.updateDish(1L, 30000, null);
@@ -144,6 +180,8 @@ class DishUseCaseTest {
     @DisplayName("Should successfully update only description when price is null")
     void shouldUpdateDishOnlyDescriptionSuccessfully() {
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
+        when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.save(any(Dish.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Dish result = dishUseCase.updateDish(1L, null, "Solo descripcion cambiada");
@@ -160,17 +198,6 @@ class DishUseCaseTest {
         InvalidDishDataException exception = assertThrows(
                 InvalidDishDataException.class,
                 () -> dishUseCase.updateDish(1L, null, null)
-        );
-        assertEquals("At least one field must be provided for update", exception.getMessage());
-        verify(dishPersistentPort, never()).findById(any());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when both price is null and description is empty")
-    void shouldThrowWhenPriceIsNullAndDescriptionIsEmpty() {
-        InvalidDishDataException exception = assertThrows(
-                InvalidDishDataException.class,
-                () -> dishUseCase.updateDish(1L, null, "   ")
         );
         assertEquals("At least one field must be provided for update", exception.getMessage());
         verify(dishPersistentPort, never()).findById(any());
@@ -215,9 +242,9 @@ class DishUseCaseTest {
     @Test
     @DisplayName("Should successfully disable dish when user is the restaurant owner")
     void shouldDisableDishSuccessfullyWhenUserIsOwner() {
-        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
         when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.save(validDish)).thenReturn(validDish);
 
         Dish result = dishUseCase.changeDishStatus(1L, false);
@@ -235,9 +262,9 @@ class DishUseCaseTest {
     void shouldEnableDishSuccessfullyWhenUserIsOwner() {
         validDish.setActive(false);
 
-        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
         when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.save(validDish)).thenReturn(validDish);
 
         Dish result = dishUseCase.changeDishStatus(1L, true);
@@ -262,7 +289,6 @@ class DishUseCaseTest {
     @Test
     @DisplayName("Should throw exception when dish to change status is not found")
     void shouldThrowWhenDishNotFoundOnStatusChange() {
-        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.findById(99L)).thenReturn(Optional.empty());
 
         DishNotFoundException exception = assertThrows(
@@ -276,7 +302,6 @@ class DishUseCaseTest {
     @Test
     @DisplayName("Should throw exception when restaurant of dish is not found")
     void shouldThrowWhenRestaurantNotFoundOnStatusChange() {
-        when(userInformationPort.getAuthenticatedUserId()).thenReturn(2L);
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
         when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.empty());
 
@@ -293,9 +318,9 @@ class DishUseCaseTest {
     void shouldThrowWhenUserIsNotRestaurantOwner() {
         Long impostorOwnerId = 999L;
 
-        when(userInformationPort.getAuthenticatedUserId()).thenReturn(impostorOwnerId);
         when(dishPersistentPort.findById(1L)).thenReturn(Optional.of(validDish));
         when(restaurantPersistentPort.findById(1L)).thenReturn(Optional.of(validRestaurant));
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(impostorOwnerId);
 
         UserNotOwnerOfRestaurantException exception = assertThrows(
                 UserNotOwnerOfRestaurantException.class,

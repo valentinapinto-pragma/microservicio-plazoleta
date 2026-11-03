@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -328,5 +329,62 @@ class DishUseCaseTest {
         );
         assertEquals("The user is not the owner of the restaurant to which the dish belongs", exception.getMessage());
         verify(dishPersistentPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should successfully get dishes by restaurant when restaurant exists and valid pagination")
+    void shouldGetDishesByRestaurantSuccessfully() {
+        when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
+        when(dishPersistentPort.getDishesByRestaurant(1L, null, 0, 10)).thenReturn(List.of(validDish));
+
+        List<Dish> result = dishUseCase.getDishesByRestaurant(1L, null, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Bandeja Paisa", result.get(0).getName());
+        verify(restaurantPersistentPort).existsById(1L);
+        verify(dishPersistentPort).getDishesByRestaurant(1L, null, 0, 10);
+    }
+
+    @Test
+    @DisplayName("Should throw RestaurantNotFoundException when restaurant does not exist on get dishes")
+    void shouldThrowRestaurantNotFoundOnGetDishes() {
+        when(restaurantPersistentPort.existsById(99L)).thenReturn(false);
+
+        RestaurantNotFoundException exception = assertThrows(
+                RestaurantNotFoundException.class,
+                () -> dishUseCase.getDishesByRestaurant(99L, null, 0, 10)
+        );
+
+        assertEquals("The restaurant associated with the dish does not exist", exception.getMessage());
+        verify(dishPersistentPort, never()).getDishesByRestaurant(any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidDishDataException when page is negative")
+    void shouldThrowInvalidDataWhenPageIsNegative() {
+        when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
+
+        InvalidDishDataException exception = assertThrows(
+                InvalidDishDataException.class,
+                () -> dishUseCase.getDishesByRestaurant(1L, null, -1, 10)
+        );
+
+        assertEquals("The page number must be greater than or equal to 0", exception.getMessage());
+        verify(dishPersistentPort, never()).getDishesByRestaurant(any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidDishDataException when size is zero or negative")
+    void shouldThrowInvalidDataWhenSizeIsZeroOrNegative() {
+        when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
+
+        InvalidDishDataException exception = assertThrows(
+                InvalidDishDataException.class,
+                () -> dishUseCase.getDishesByRestaurant(1L, null, 0, 0)
+        );
+
+        assertEquals("The page size must be greater than 0", exception.getMessage());
+        verify(dishPersistentPort, never()).getDishesByRestaurant(any(), any(), anyInt(), anyInt());
     }
 }

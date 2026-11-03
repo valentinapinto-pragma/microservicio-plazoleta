@@ -11,6 +11,8 @@ import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
 
+import java.util.List;
+
 public class DishUseCase implements DishServicePort {
 
     private static final String AT_LEAST_ONE_FIELD_MESSAGE = "At least one field must be provided for update";
@@ -21,6 +23,8 @@ public class DishUseCase implements DishServicePort {
     private static final String INVALID_STATUS_MESSAGE = "The active status cannot be null";
     private static final String DISH_NOT_FOUND_MESSAGE = "Dish not found with id: ";
     private static final String NOT_OWNER_MESSAGE = "The user is not the owner of the restaurant to which the dish belongs";
+    private static final String INVALID_PAGE_MESSAGE = "The page number must be greater than or equal to 0";
+    private static final String INVALID_SIZE_MESSAGE = "The page size must be greater than 0";
 
     private final DishPersistentPort dishPersistentPort;
     private final RestaurantPersistentPort restaurantPersistentPort;
@@ -86,6 +90,17 @@ public class DishUseCase implements DishServicePort {
         return dishPersistentPort.save(dish);
     }
 
+    @Override
+    public List<Dish> getDishesByRestaurant(Long idRestaurant, Long categoryId, int page, int size) {
+        if (idRestaurant == null || !restaurantPersistentPort.existsById(idRestaurant)) {
+            throw new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE);
+        }
+
+        validatePagination(page, size);
+
+        return dishPersistentPort.getDishesByRestaurant(idRestaurant, categoryId, page, size);
+    }
+
     private void validateRestaurantOwner(Long idRestaurant) {
         if (idRestaurant == null) {
             throw new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE);
@@ -115,6 +130,14 @@ public class DishUseCase implements DishServicePort {
     private void validateCategory(Dish dish) {
         if (dish.getCategory() == null || dish.getCategory().getId() == null) {
             throw new InvalidDishDataException(INVALID_CATEGORY_MESSAGE);
+        }
+    }
+    private void validatePagination(int page, int size) {
+        if (page < 0) {
+            throw new InvalidDishDataException(INVALID_PAGE_MESSAGE);
+        }
+        if (size <= 0) {
+            throw new InvalidDishDataException(INVALID_SIZE_MESSAGE);
         }
     }
 }

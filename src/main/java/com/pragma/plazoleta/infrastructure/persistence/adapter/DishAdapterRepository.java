@@ -6,6 +6,9 @@ import com.pragma.plazoleta.infrastructure.persistence.entity.DishEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.DishEntityMapper;
 import com.pragma.plazoleta.infrastructure.persistence.repository.DishRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,6 +21,23 @@ public class DishAdapterRepository implements DishPersistentPort {
 
     private final DishRepository dishRepository;
     private final DishEntityMapper dishEntityMapper;
+
+    @Override
+    public List<Dish> getDishesByRestaurant(Long idRestaurant, Long categoryId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<DishEntity> dishEntities;
+
+        if (categoryId != null) {
+            dishEntities = dishRepository.findByIdRestaurantAndCategoryIdAndActiveTrue(idRestaurant, categoryId, pageable);
+        } else {
+            dishEntities = dishRepository.findByIdRestaurantAndActiveTrue(idRestaurant, pageable);
+        }
+
+        return dishEntities.getContent()
+                .stream()
+                .map(dishEntityMapper::toDomain)
+                .collect(Collectors.toList());
+    }
 
     @Override
     public Dish save(Dish dish) {

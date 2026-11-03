@@ -3,6 +3,7 @@ package com.pragma.plazoleta.application.handler;
 import com.pragma.plazoleta.application.dto.request.DishRequestDto;
 import com.pragma.plazoleta.application.dto.request.DishStatusRequestDto;
 import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
+import com.pragma.plazoleta.application.dto.response.DishResponseDto;
 import com.pragma.plazoleta.application.mapper.DishDtoMapper;
 import com.pragma.plazoleta.domain.model.Category;
 import com.pragma.plazoleta.domain.model.Dish;
@@ -14,6 +15,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -61,5 +66,23 @@ class DishHandlerTest {
         dishHandler.changeDishStatus(dishId, statusDto);
 
         verify(dishServicePort).changeDishStatus(dishId, false);
+    }
+
+    @Test
+    @DisplayName("Should successfully get dishes by restaurant and map to DTO list")
+    void shouldGetDishesByRestaurantSuccessfully() {
+        Dish dish = new Dish(1L, "Hamburguesa", 15000, "Carne", "https://img.com/burger.png", new Category(1L, "Comida", null), 10L, true);
+        DishResponseDto responseDto = new DishResponseDto(1L, "Hamburguesa", 15000, "Carne", "https://img.com/burger.png", "Comida");
+
+        when(dishServicePort.getDishesByRestaurant(10L, 1L, 0, 10)).thenReturn(List.of(dish));
+        when(dishDtoMapper.toResponseDtoList(List.of(dish))).thenReturn(List.of(responseDto));
+
+        List<DishResponseDto> result = dishHandler.getDishesByRestaurant(10L, 1L, 0, 10);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Hamburguesa", result.get(0).getName());
+        verify(dishServicePort).getDishesByRestaurant(10L, 1L, 0, 10);
+        verify(dishDtoMapper).toResponseDtoList(List.of(dish));
     }
 }

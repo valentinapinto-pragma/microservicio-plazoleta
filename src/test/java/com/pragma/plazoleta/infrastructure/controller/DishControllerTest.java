@@ -22,14 +22,18 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.pragma.plazoleta.application.dto.response.DishResponseDto;
+import java.util.List;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -249,5 +253,54 @@ class DishControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 200 OK when getting dishes by restaurant successfully")
+    void shouldReturnOkWhenGettingDishesByRestaurant() throws Exception {
+        DishResponseDto responseDto = new DishResponseDto(1L, "Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", "Comidas Rapidas");
+
+        when(dishHandler.getDishesByRestaurant(eq(1L), isNull(), eq(0), eq(10)))
+                .thenReturn(List.of(responseDto));
+
+        mockMvc.perform(get("/dishes")
+                        .param("idRestaurant", "1")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].name").value("Hamburguesa"))
+                .andExpect(jsonPath("$[0].price").value(15000))
+                .andExpect(jsonPath("$[0].category").value("Comidas Rapidas"));
+
+        verify(dishHandler).getDishesByRestaurant(eq(1L), isNull(), eq(0), eq(10));
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when restaurant does not exist on get dishes")
+    void shouldReturnBadRequestWhenRestaurantDoesNotExistOnGetDishes() throws Exception {
+        doThrow(new RestaurantNotFoundException("The restaurant associated with the dish does not exist"))
+                .when(dishHandler).getDishesByRestaurant(eq(99L), isNull(), anyInt(), anyInt());
+
+        mockMvc.perform(get("/dishes")
+                        .param("idRestaurant", "99")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The restaurant associated with the dish does not exist"));
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when pagination parameters are invalid on get dishes")
+    void shouldReturnBadRequestWhenPaginationIsInvalidOnGetDishes() throws Exception {
+        doThrow(new InvalidDishDataException("The page number must be greater than or equal to 0"))
+                .when(dishHandler).getDishesByRestaurant(eq(1L), isNull(), eq(-1), anyInt());
+
+        mockMvc.perform(get("/dishes")
+                        .param("idRestaurant", "1")
+                        .param("page", "-1")
+                        .param("size", "10"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The page number must be greater than or equal to 0"));
     }
 }

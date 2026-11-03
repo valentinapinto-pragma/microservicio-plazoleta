@@ -3,6 +3,7 @@ package com.pragma.plazoleta.infrastructure.controller;
 import com.pragma.plazoleta.application.dto.request.DishRequestDto;
 import com.pragma.plazoleta.application.dto.request.DishStatusRequestDto;
 import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
+import com.pragma.plazoleta.application.dto.response.DishResponseDto;
 import com.pragma.plazoleta.application.handler.DishHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -12,14 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @RestController
 @RequestMapping("/dishes")
@@ -70,5 +67,20 @@ public class DishController {
             @Valid @RequestBody DishStatusRequestDto dishStatusRequestDto) {
         dishHandler.changeDishStatus(id, dishStatusRequestDto);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "List dishes by restaurant", description = "Allows the client to list active dishes of a restaurant, optionally filtered by category and paginated")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dishes listed successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid pagination parameters", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Restaurant not found", content = @Content)
+    })
+    @GetMapping
+    public ResponseEntity<List<DishResponseDto>> getDishesByRestaurant(
+            @RequestParam Long idRestaurant,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(dishHandler.getDishesByRestaurant(idRestaurant, categoryId, page, size));
     }
 }

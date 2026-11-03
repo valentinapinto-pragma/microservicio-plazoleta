@@ -44,7 +44,7 @@ public class SecurityConfiguration {
                         "/swagger-resources/**",
                         "/webjars/**"
                 ).permitAll()
-                .antMatchers(HttpMethod.GET, "/restaurants/**").permitAll()
+                .antMatchers(HttpMethod.GET, "/restaurants/**", "/dishes/**").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

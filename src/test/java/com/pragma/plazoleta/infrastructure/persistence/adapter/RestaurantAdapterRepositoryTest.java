@@ -132,22 +132,6 @@ class RestaurantAdapterRepositoryTest {
     }
 
     @Test
-    @DisplayName("Should update restaurant successfully through repository and mapper")
-    void shouldUpdateRestaurantSuccessfully() {
-        when(restaurantEntityMapper.toEntity(restaurant)).thenReturn(entity);
-        when(restaurantRepository.save(entity)).thenReturn(entity);
-        when(restaurantEntityMapper.toDomain(entity)).thenReturn(restaurant);
-
-        Restaurant result = restaurantAdapterRepository.update(restaurant);
-
-        assertNotNull(result);
-        assertEquals(restaurant.getName(), result.getName());
-        verify(restaurantEntityMapper).toEntity(restaurant);
-        verify(restaurantRepository).save(entity);
-        verify(restaurantEntityMapper).toDomain(entity);
-    }
-
-    @Test
     @DisplayName("Should delete restaurant by id through repository")
     void shouldDeleteRestaurantById() {
         doNothing().when(restaurantRepository).deleteById(1L);

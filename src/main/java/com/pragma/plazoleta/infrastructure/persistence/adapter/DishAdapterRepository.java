@@ -60,13 +60,6 @@ public class DishAdapterRepository implements DishPersistentPort {
     }
 
     @Override
-    public Dish update(Dish dish) {
-        DishEntity entity = dishEntityMapper.toEntity(dish);
-        DishEntity savedEntity = dishRepository.save(entity);
-        return dishEntityMapper.toDomain(savedEntity);
-    }
-
-    @Override
     public void delete(Long id) {
         dishRepository.deleteById(id);
     }

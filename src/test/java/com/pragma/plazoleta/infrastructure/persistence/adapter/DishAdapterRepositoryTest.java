@@ -90,22 +90,6 @@ class DishAdapterRepositoryTest {
     }
 
     @Test
-    @DisplayName("Should update dish successfully through repository and mapper")
-    void shouldUpdateDishSuccessfully() {
-        when(dishEntityMapper.toEntity(dish)).thenReturn(entity);
-        when(dishRepository.save(entity)).thenReturn(entity);
-        when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
-
-        Dish result = dishAdapterRepository.update(dish);
-
-        assertNotNull(result);
-        assertEquals(dish.getName(), result.getName());
-        verify(dishEntityMapper).toEntity(dish);
-        verify(dishRepository).save(entity);
-        verify(dishEntityMapper).toDomain(entity);
-    }
-
-    @Test
     @DisplayName("Should delete dish by id through repository")
     void shouldDeleteDishById() {
         doNothing().when(dishRepository).deleteById(1L);

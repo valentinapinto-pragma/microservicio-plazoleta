@@ -110,7 +110,7 @@ public class DishUseCase implements DishServicePort {
                 .orElseThrow(() -> new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE));
 
         Long ownerId = userInformationPort.getAuthenticatedUserId();
-        if (ownerId == null || !restaurant.getIdOwner().equals(ownerId)) {
+        if (!restaurant.getIdOwner().equals(ownerId)) {
             throw new UserNotOwnerOfRestaurantException(NOT_OWNER_MESSAGE);
         }
     }

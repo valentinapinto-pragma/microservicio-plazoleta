@@ -52,12 +52,6 @@ public class RestaurantAdapterRepository implements RestaurantPersistentPort {
     }
 
     @Override
-    public Restaurant update(Restaurant restaurant) {
-        RestaurantEntity entity = restaurantEntityMapper.toEntity(restaurant);
-        return restaurantEntityMapper.toDomain(restaurantRepository.save(entity));
-    }
-
-    @Override
     public void delete(Long id) {
         restaurantRepository.deleteById(id);
     }

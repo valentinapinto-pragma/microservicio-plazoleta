@@ -10,8 +10,6 @@ spring:
     username: root
     password: ${DB_PASSWORD:1234}
     driver-class-name: com.mysql.cj.jdbc.Driver
-jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
 
   jpa:
     hibernate:
@@ -20,6 +18,9 @@ jwt:
     properties:
       hibernate:
         format_sql: true
+
+jwt:
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
 
 # Configuración para comunicarnos con el microservicio de usuarios (OpenFeign)
 services:

@@ -1,13 +1,18 @@
 package com.pragma.plazoleta.infrastructure.config;
 
 import com.pragma.plazoleta.application.handler.DishHandler;
+import com.pragma.plazoleta.application.handler.OrderHandler;
 import com.pragma.plazoleta.application.mapper.DishDtoMapper;
+import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
+import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
 import com.pragma.plazoleta.domain.servicePort.RestaurantServicePort;
 import com.pragma.plazoleta.domain.useCase.DishUseCase;
+import com.pragma.plazoleta.domain.useCase.OrderUseCase;
 import com.pragma.plazoleta.domain.useCase.RestaurantUseCase;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -34,6 +39,18 @@ public class BeanConfiguration {
     @Bean
     public DishHandler dishHandler(DishServicePort dishServicePort, DishDtoMapper dishDtoMapper) {
         return new DishHandler(dishServicePort, dishDtoMapper);
+    }
+
+    @Bean
+    public OrderServicePort orderServicePort(OrderPersistentPort orderPersistentPort,
+                                             DishPersistentPort dishPersistentPort,
+                                             RestaurantPersistentPort restaurantPersistentPort) {
+        return new OrderUseCase(orderPersistentPort, dishPersistentPort, restaurantPersistentPort);
+    }
+
+    @Bean
+    public OrderHandler orderHandler(OrderServicePort orderServicePort, OrderDtoMapper orderDtoMapper) {
+        return new OrderHandler(orderServicePort, orderDtoMapper);
     }
 
     @Bean

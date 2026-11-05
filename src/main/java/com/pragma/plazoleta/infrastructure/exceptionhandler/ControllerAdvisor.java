@@ -1,7 +1,11 @@
 package com.pragma.plazoleta.infrastructure.exceptionhandler;
 
+import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
+import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
+import com.pragma.plazoleta.domain.exception.DishInactiveException;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
 import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
+import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
@@ -42,6 +46,30 @@ public class ControllerAdvisor {
 
     @ExceptionHandler(InvalidDishDataException.class)
     public ResponseEntity<ErrorResponseDto> handleInvalidDishDataException(InvalidDishDataException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidOrderDataException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvalidOrderDataException(InvalidOrderDataException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ClientHasActiveOrderException.class)
+    public ResponseEntity<ErrorResponseDto> handleClientHasActiveOrderException(ClientHasActiveOrderException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DishDoesNotBelongToRestaurantException.class)
+    public ResponseEntity<ErrorResponseDto> handleDishDoesNotBelongToRestaurantException(DishDoesNotBelongToRestaurantException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DishInactiveException.class)
+    public ResponseEntity<ErrorResponseDto> handleDishInactiveException(DishInactiveException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponseDto(ex.getMessage()));
     }

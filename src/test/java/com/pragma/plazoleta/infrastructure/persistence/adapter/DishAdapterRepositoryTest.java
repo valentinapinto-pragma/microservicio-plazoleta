@@ -98,4 +98,41 @@ class DishAdapterRepositoryTest {
 
         verify(dishRepository).deleteById(1L);
     }
+    @Test
+    @DisplayName("Should return paged dishes filtered by category when categoryId is provided")
+    void shouldReturnDishesFilteredByCategory() {
+        // Arrange
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 5);
+        org.springframework.data.domain.Page<DishEntity> page = new org.springframework.data.domain.PageImpl<>(List.of(entity));
+
+        when(dishRepository.findByIdRestaurantAndCategoryIdAndActiveTrue(2L, 1L, pageable)).thenReturn(page);
+        when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
+
+        // Act
+        List<Dish> result = dishAdapterRepository.getDishesByRestaurant(2L, 1L, 0, 5);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(dishRepository).findByIdRestaurantAndCategoryIdAndActiveTrue(2L, 1L, pageable);
+    }
+
+    @Test
+    @DisplayName("Should return paged dishes without category filter when categoryId is null")
+    void shouldReturnDishesWithoutCategoryFilterWhenCategoryIdIsNull() {
+        // Arrange
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 5);
+        org.springframework.data.domain.Page<DishEntity> page = new org.springframework.data.domain.PageImpl<>(List.of(entity));
+
+        when(dishRepository.findByIdRestaurantAndActiveTrue(2L, pageable)).thenReturn(page);
+        when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
+
+        // Act
+        List<Dish> result = dishAdapterRepository.getDishesByRestaurant(2L, null, 0, 5);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(dishRepository).findByIdRestaurantAndActiveTrue(2L, pageable);
+    }
 }

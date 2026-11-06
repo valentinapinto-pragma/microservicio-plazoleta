@@ -12,6 +12,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -89,6 +93,46 @@ class OrderAdapterRepositoryTest {
         // Assert
         assertFalse(exists);
         verify(orderRepository, times(1)).existsByIdClientAndStatusIn(10L, statuses);
+    }
+
+    @Test
+    @DisplayName("Should successfully get orders by restaurant and status with pagination")
+    void shouldGetOrdersByRestaurantAndStatusSuccessfully() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<OrderEntity> orderPage = new PageImpl<>(List.of(orderEntity));
+
+        when(orderRepository.findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable)).thenReturn(orderPage);
+        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(order);
+
+        // Act
+        List<Order> result = orderAdapterRepository.getOrdersByRestaurantAndStatus(1L, OrderStatus.PENDIENTE, 0, 10);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(order.getId(), result.get(0).getId());
+        verify(orderRepository, times(1)).findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable);
+        verify(orderEntityMapper, times(1)).toDomain(orderEntity);
+    }
+
+    @Test
+    @DisplayName("Should return empty list when no orders match restaurant and status")
+    void shouldReturnEmptyListWhenNoOrdersMatch() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<OrderEntity> emptyPage = new PageImpl<>(List.of());
+
+        when(orderRepository.findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable)).thenReturn(emptyPage);
+
+        // Act
+        List<Order> result = orderAdapterRepository.getOrdersByRestaurantAndStatus(1L, OrderStatus.PENDIENTE, 0, 10);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(orderRepository, times(1)).findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable);
+        verify(orderEntityMapper, never()).toDomain(any(OrderEntity.class));
     }
 
     @Test

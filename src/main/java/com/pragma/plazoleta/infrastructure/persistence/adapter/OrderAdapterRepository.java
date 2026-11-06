@@ -7,6 +7,8 @@ import com.pragma.plazoleta.infrastructure.persistence.entity.OrderEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.OrderEntityMapper;
 import com.pragma.plazoleta.infrastructure.persistence.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -30,6 +32,16 @@ public class OrderAdapterRepository implements OrderPersistentPort {
     @Override
     public boolean existsByClientIdAndStatusIn(Long clientId, List<OrderStatus> statuses) {
         return orderRepository.existsByIdClientAndStatusIn(clientId, statuses);
+    }
+
+    @Override
+    public List<Order> getOrdersByRestaurantAndStatus(Long restaurantId, OrderStatus status, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return orderRepository.findByIdRestaurantAndStatus(restaurantId, status, pageable)
+                .getContent()
+                .stream()
+                .map(orderEntityMapper::toDomain)
+                .collect(Collectors.toList());
     }
 
     @Override

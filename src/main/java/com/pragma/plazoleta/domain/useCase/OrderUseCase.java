@@ -6,6 +6,9 @@ import com.pragma.plazoleta.domain.exception.DishInactiveException;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
 import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
+import com.pragma.plazoleta.domain.exception.InvalidOrderStatusException;
+import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToRestaurantException;
+import com.pragma.plazoleta.domain.exception.OrderNotFoundException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Order;
@@ -73,6 +76,54 @@ public class OrderUseCase implements OrderServicePort {
 
         enrichOrdersWithDishDetails(orders);
         return orders;
+    }
+
+    @Override
+    public Order assignOrder(Long orderId, OrderStatus status, Long employeeId) {
+        validateOrderIdNotNull(orderId);
+        validateStatusNotNull(status);
+        validateEmployeeIdNotNull(employeeId);
+        validateStatusIsInPreparation(status);
+
+        RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"));
+
+        Order order = orderPersistentPort.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
+
+        validateOrderBelongsToRestaurant(order, employee.getRestaurantId());
+        validateOrderIsInPendingStatus(order);
+
+        order.setStatus(OrderStatus.EN_PREPARACION);
+        order.setChefId(employeeId);
+
+        Order savedOrder = orderPersistentPort.save(order);
+        enrichOrdersWithDishDetails(List.of(savedOrder));
+        return savedOrder;
+    }
+
+    private void validateOrderIdNotNull(Long orderId) {
+        if (orderId == null) {
+            throw new InvalidOrderDataException("Order id cannot be null");
+        }
+    }
+
+    private void validateStatusIsInPreparation(OrderStatus status) {
+        if (status != OrderStatus.EN_PREPARACION) {
+            throw new InvalidOrderStatusException("The requested status transition is invalid; only EN_PREPARACION is allowed for order assignment");
+        }
+    }
+
+    private void validateOrderBelongsToRestaurant(Order order, Long restaurantId) {
+        if (!order.getRestaurantId().equals(restaurantId)) {
+            throw new OrderDoesNotBelongToRestaurantException("The order does not belong to the restaurant where the employee works");
+        }
+    }
+
+    private void validateOrderIsInPendingStatus(Order order) {
+        if (order.getStatus() != OrderStatus.PENDIENTE) {
+            throw new InvalidOrderStatusException("Only orders in PENDIENTE status can be assigned to a chef");
+        }
     }
 
     private void validateStatusNotNull(OrderStatus status) {

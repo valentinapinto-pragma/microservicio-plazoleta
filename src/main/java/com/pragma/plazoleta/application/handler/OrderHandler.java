@@ -1,11 +1,15 @@
 package com.pragma.plazoleta.application.handler;
 
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
+import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
 import com.pragma.plazoleta.domain.model.Order;
+import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @Transactional
@@ -18,5 +22,11 @@ public class OrderHandler {
         Order order = orderDtoMapper.toDomain(orderRequestDto);
         order.setClientId(clientId);
         orderServicePort.createOrder(order);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponseDto> getOrdersByStatus(OrderStatus status, int page, int size, Long employeeId) {
+        List<Order> orders = orderServicePort.getOrdersByStatus(status, page, size, employeeId);
+        return orderDtoMapper.toResponseDtoList(orders);
     }
 }

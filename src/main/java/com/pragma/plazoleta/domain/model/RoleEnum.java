@@ -1,24 +1,18 @@
 package com.pragma.plazoleta.domain.model;
 
 public enum RoleEnum {
-    ADMIN(1L, "ROLE_ADMIN"),
-    OWNER(2L, "ROLE_OWNER"),
-    EMPLOYEE(3L, "ROLE_EMPLOYEE"),
-    CLIENT(4L, "ROLE_CLIENT");
+    ADMIN(1L),
+    OWNER(2L),
+    EMPLOYEE(3L),
+    CLIENT(4L);
 
     private final Long id;
-    private final String roleName;
 
-    RoleEnum(Long id, String roleName) {
+    RoleEnum(Long id) {
         this.id = id;
-        this.roleName = roleName;
     }
 
     public Long getId() {
         return id;
-    }
-
-    public String getRoleName() {
-        return roleName;
     }
 }

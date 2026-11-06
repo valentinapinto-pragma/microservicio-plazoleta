@@ -387,4 +387,37 @@ class DishUseCaseTest {
         assertEquals("The page size must be greater than 0", exception.getMessage());
         verify(dishPersistentPort, never()).getDishesByRestaurant(any(), any(), anyInt(), anyInt());
     }
+
+    @Test
+    @DisplayName("Should throw RestaurantNotFoundException when dish restaurant id is null on create")
+    void shouldThrowWhenDishRestaurantIdIsNull() {
+        validDish.setIdRestaurant(null);
+
+        RestaurantNotFoundException exception = assertThrows(
+                RestaurantNotFoundException.class,
+                () -> dishUseCase.createDish(validDish)
+        );
+        assertEquals("The restaurant associated with the dish does not exist", exception.getMessage());
+        verify(dishPersistentPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when updating dish with null price and blank description")
+    void shouldThrowWhenUpdatingWithNullPriceAndBlankDescription() {
+        InvalidDishDataException exception = assertThrows(
+                InvalidDishDataException.class,
+                () -> dishUseCase.updateDish(1L, null, "   ")
+        );
+        assertEquals("At least one field must be provided for update", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should throw RestaurantNotFoundException when idRestaurant is null on getDishesByRestaurant")
+    void shouldThrowWhenIdRestaurantIsNullOnGetDishes() {
+        RestaurantNotFoundException exception = assertThrows(
+                RestaurantNotFoundException.class,
+                () -> dishUseCase.getDishesByRestaurant(null, null, 0, 10)
+        );
+        assertEquals("The restaurant associated with the dish does not exist", exception.getMessage());
+    }
 }

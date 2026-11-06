@@ -38,7 +38,7 @@ public class RestaurantUseCase implements RestaurantServicePort {
         validateRestaurantData(restaurant);
         validateOwner(restaurant.getIdOwner());
         validateNitNotDuplicated(restaurant.getNit());
-        return restaurantPersistentPort.saveRestaurant(restaurant);
+        return restaurantPersistentPort.save(restaurant);
     }
 
     @Override

@@ -9,8 +9,4 @@ public interface RestaurantPersistentPort extends CrudBase<Restaurant, Long> {
     boolean existsByNit(String nit);
     boolean existsById(Long id);
     List<Restaurant> getRestaurants(int page, int size);
-
-    default Restaurant saveRestaurant(Restaurant restaurant) {
-        return save(restaurant);
-    }
 }

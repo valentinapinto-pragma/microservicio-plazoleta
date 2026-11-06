@@ -51,7 +51,7 @@ class RestaurantUseCaseTest {
         // Arrange
         when(userInformationPort.isValidOwner(2L)).thenReturn(true);
         when(restaurantPersistentPort.existsByNit("123456789")).thenReturn(false);
-        when(restaurantPersistentPort.saveRestaurant(validRestaurant)).thenReturn(validRestaurant);
+        when(restaurantPersistentPort.save(validRestaurant)).thenReturn(validRestaurant);
 
         // Act
         Restaurant result = restaurantUseCase.createRestaurant(validRestaurant);
@@ -61,7 +61,7 @@ class RestaurantUseCaseTest {
         assertEquals(validRestaurant.getName(), result.getName());
         verify(userInformationPort).isValidOwner(2L);
         verify(restaurantPersistentPort).existsByNit("123456789");
-        verify(restaurantPersistentPort).saveRestaurant(validRestaurant);
+        verify(restaurantPersistentPort).save(validRestaurant);
     }
 
     @Test
@@ -71,7 +71,7 @@ class RestaurantUseCaseTest {
         validRestaurant.setPhone("573001234567");
         when(userInformationPort.isValidOwner(2L)).thenReturn(true);
         when(restaurantPersistentPort.existsByNit("123456789")).thenReturn(false);
-        when(restaurantPersistentPort.saveRestaurant(validRestaurant)).thenReturn(validRestaurant);
+        when(restaurantPersistentPort.save(validRestaurant)).thenReturn(validRestaurant);
 
         // Act
         Restaurant result = restaurantUseCase.createRestaurant(validRestaurant);
@@ -208,7 +208,7 @@ class RestaurantUseCaseTest {
         );
         assertEquals("The user specified as owner does not exist or does not possess the OWNER role", exception.getMessage());
         verify(userInformationPort).isValidOwner(2L);
-        verify(restaurantPersistentPort, never()).saveRestaurant(any());
+        verify(restaurantPersistentPort, never()).save(any());
     }
 
     @Test
@@ -224,7 +224,7 @@ class RestaurantUseCaseTest {
                 () -> restaurantUseCase.createRestaurant(validRestaurant)
         );
         assertEquals("A restaurant with the provided NIT already exists", exception.getMessage());
-        verify(restaurantPersistentPort, never()).saveRestaurant(any());
+        verify(restaurantPersistentPort, never()).save(any());
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
 import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.DishInactiveException;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
+import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
 import com.pragma.plazoleta.domain.model.Category;
@@ -11,8 +12,10 @@ import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.RestaurantEmployee;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +48,9 @@ class OrderUseCaseTest {
     @Mock
     private RestaurantPersistentPort restaurantPersistentPort;
 
+    @Mock
+    private RestaurantEmployeePersistentPort restaurantEmployeePersistentPort;
+
     @InjectMocks
     private OrderUseCase orderUseCase;
 
@@ -74,20 +80,19 @@ class OrderUseCaseTest {
         );
     }
 
+    // TESTS: HU-11 - createOrder
+
     @Test
     @DisplayName("Should successfully create order when all data and business rules are valid")
     void shouldCreateOrderSuccessfully() {
-        // Arrange
         when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
         when(orderPersistentPort.existsByClientIdAndStatusIn(eq(10L), anyList())).thenReturn(false);
         when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(validDish1));
         when(dishPersistentPort.findById(101L)).thenReturn(Optional.of(validDish2));
         when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // Act
         Order result = orderUseCase.createOrder(validOrder);
 
-        // Assert
         assertNotNull(result);
         assertEquals(OrderStatus.PENDIENTE, result.getStatus());
         assertNotNull(result.getDate());
@@ -100,10 +105,8 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when order dishes list is null")
     void shouldThrowExceptionWhenOrderDishesIsNull() {
-        // Arrange
         validOrder.setOrderDishes(null);
 
-        // Act & Assert
         InvalidOrderDataException exception = assertThrows(
                 InvalidOrderDataException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -115,10 +118,8 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when order dishes list is empty")
     void shouldThrowExceptionWhenOrderDishesIsEmpty() {
-        // Arrange
         validOrder.setOrderDishes(Collections.emptyList());
 
-        // Act & Assert
         InvalidOrderDataException exception = assertThrows(
                 InvalidOrderDataException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -130,10 +131,8 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when client id is null")
     void shouldThrowExceptionWhenClientIdIsNull() {
-        // Arrange
         validOrder.setClientId(null);
 
-        // Act & Assert
         InvalidOrderDataException exception = assertThrows(
                 InvalidOrderDataException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -144,13 +143,11 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when order contains duplicate dishes")
     void shouldThrowExceptionWhenOrderContainsDuplicateDishes() {
-        // Arrange
         validOrder.setOrderDishes(List.of(
                 new OrderDish(null, null, 100L, 2),
                 new OrderDish(null, null, 100L, 1)
         ));
 
-        // Act & Assert
         InvalidOrderDataException exception = assertThrows(
                 InvalidOrderDataException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -161,10 +158,8 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when restaurant does not exist")
     void shouldThrowExceptionWhenRestaurantDoesNotExist() {
-        // Arrange
         when(restaurantPersistentPort.existsById(1L)).thenReturn(false);
 
-        // Act & Assert
         RestaurantNotFoundException exception = assertThrows(
                 RestaurantNotFoundException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -176,11 +171,9 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when client already has an active order in progress")
     void shouldThrowExceptionWhenClientHasActiveOrder() {
-        // Arrange
         when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
         when(orderPersistentPort.existsByClientIdAndStatusIn(eq(10L), anyList())).thenReturn(true);
 
-        // Act & Assert
         ClientHasActiveOrderException exception = assertThrows(
                 ClientHasActiveOrderException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -193,13 +186,11 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when dish quantity is zero or negative")
     void shouldThrowExceptionWhenDishQuantityIsInvalid() {
-        // Arrange
         validOrder.getOrderDishes().get(0).setQuantity(0);
 
         when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
         when(orderPersistentPort.existsByClientIdAndStatusIn(eq(10L), anyList())).thenReturn(false);
 
-        // Act & Assert
         InvalidOrderDataException exception = assertThrows(
                 InvalidOrderDataException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -211,12 +202,10 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when dish does not exist")
     void shouldThrowExceptionWhenDishDoesNotExist() {
-        // Arrange
         when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
         when(orderPersistentPort.existsByClientIdAndStatusIn(eq(10L), anyList())).thenReturn(false);
         when(dishPersistentPort.findById(100L)).thenReturn(Optional.empty());
 
-        // Act & Assert
         DishNotFoundException exception = assertThrows(
                 DishNotFoundException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -228,14 +217,12 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when dish belongs to a different restaurant")
     void shouldThrowExceptionWhenDishBelongsToDifferentRestaurant() {
-        // Arrange: validDish1 belongs to restaurant 999L instead of 1L
         Dish dishFromOtherRestaurant = new Dish(100L, "Sushi", 30000, "Sushi roll", "http://img.com/3", null, 999L, true);
 
         when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
         when(orderPersistentPort.existsByClientIdAndStatusIn(eq(10L), anyList())).thenReturn(false);
         when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(dishFromOtherRestaurant));
 
-        // Act & Assert
         DishDoesNotBelongToRestaurantException exception = assertThrows(
                 DishDoesNotBelongToRestaurantException.class,
                 () -> orderUseCase.createOrder(validOrder)
@@ -247,19 +234,161 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when dish is inactive")
     void shouldThrowExceptionWhenDishIsInactive() {
-        // Arrange: validDish1 is inactive (active = false)
         Dish inactiveDish = new Dish(100L, "Hamburguesa", 25000, "Rica", "http://img.com/1", null, 1L, false);
 
         when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
         when(orderPersistentPort.existsByClientIdAndStatusIn(eq(10L), anyList())).thenReturn(false);
         when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(inactiveDish));
 
-        // Act & Assert
         DishInactiveException exception = assertThrows(
                 DishInactiveException.class,
                 () -> orderUseCase.createOrder(validOrder)
         );
         assertEquals("The dish 'Hamburguesa' is currently inactive", exception.getMessage());
         verify(orderPersistentPort, never()).save(any());
+    }
+
+    // TESTS: HU-12 - getOrdersByStatus
+
+    @Test
+    @DisplayName("Should successfully get orders by status enriched with dish details")
+    void shouldGetOrdersByStatusSuccessfully() {
+        Long employeeId = 50L;
+        Long restaurantId = 1L;
+        RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
+
+        Order existingOrder = new Order(
+                1000L,
+                10L,
+                null,
+                OrderStatus.PENDIENTE,
+                null,
+                restaurantId,
+                List.of(
+                        new OrderDish(1L, 1000L, 100L, 2),
+                        new OrderDish(2L, 1000L, 101L, 1)
+                )
+        );
+
+        when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10))
+                .thenReturn(List.of(existingOrder));
+        when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(validDish1));
+        when(dishPersistentPort.findById(101L)).thenReturn(Optional.of(validDish2));
+
+        // Act
+        List<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10, employeeId);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        Order returnedOrder = result.get(0);
+        assertEquals(1000L, returnedOrder.getId());
+        assertEquals(2, returnedOrder.getOrderDishes().size());
+        assertEquals(validDish1, returnedOrder.getOrderDishes().get(0).getDish());
+        assertEquals(validDish2, returnedOrder.getOrderDishes().get(1).getDish());
+
+        verify(restaurantEmployeePersistentPort, times(1)).findByEmployeeId(employeeId);
+        verify(orderPersistentPort, times(1)).getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10);
+        verify(dishPersistentPort, times(1)).findById(100L);
+        verify(dishPersistentPort, times(1)).findById(101L);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when employee is not assigned to any restaurant")
+    void shouldThrowExceptionWhenEmployeeNotAssignedToRestaurant() {
+        Long employeeId = 99L;
+        when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.empty());
+
+        EmployeeNotAssignedToRestaurantException exception = assertThrows(
+                EmployeeNotAssignedToRestaurantException.class,
+                () -> orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10, employeeId)
+        );
+        assertEquals("The employee is not assigned to any restaurant", exception.getMessage());
+        verify(orderPersistentPort, never()).getOrdersByRestaurantAndStatus(any(), any(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when status is null")
+    void shouldThrowExceptionWhenStatusIsNull() {
+        InvalidOrderDataException exception = assertThrows(
+                InvalidOrderDataException.class,
+                () -> orderUseCase.getOrdersByStatus(null, 0, 10, 50L)
+        );
+        assertEquals("Order status cannot be null", exception.getMessage());
+        verifyNoInteractions(restaurantEmployeePersistentPort, orderPersistentPort);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when page is negative")
+    void shouldThrowExceptionWhenPageIsNegative() {
+        InvalidOrderDataException exception = assertThrows(
+                InvalidOrderDataException.class,
+                () -> orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, -1, 10, 50L)
+        );
+        assertEquals("The page must be greater than or equal to 0", exception.getMessage());
+        verifyNoInteractions(restaurantEmployeePersistentPort, orderPersistentPort);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when size is zero or negative")
+    void shouldThrowExceptionWhenSizeIsZeroOrNegative() {
+        InvalidOrderDataException exception = assertThrows(
+                InvalidOrderDataException.class,
+                () -> orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 0, 50L)
+        );
+        assertEquals("The page size must be greater than 0", exception.getMessage());
+        verifyNoInteractions(restaurantEmployeePersistentPort, orderPersistentPort);
+    }
+
+    @Test
+    @DisplayName("Should throw exception when employee id is null")
+    void shouldThrowExceptionWhenEmployeeIdIsNull() {
+        InvalidOrderDataException exception = assertThrows(
+                InvalidOrderDataException.class,
+                () -> orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10, null)
+        );
+        assertEquals("Employee id cannot be null", exception.getMessage());
+        verifyNoInteractions(restaurantEmployeePersistentPort, orderPersistentPort);
+    }
+
+    @Test
+    @DisplayName("Should return empty list when no orders are found for restaurant and status")
+    void shouldReturnEmptyListWhenNoOrdersFound() {
+        Long employeeId = 50L;
+        Long restaurantId = 1L;
+        RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
+
+        when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10))
+                .thenReturn(Collections.emptyList());
+
+        // Act
+        List<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10, employeeId);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(dishPersistentPort);
+    }
+
+    @Test
+    @DisplayName("Should handle order with null dishes list gracefully")
+    void shouldHandleOrderWithNullDishesGracefully() {
+        Long employeeId = 50L;
+        Long restaurantId = 1L;
+        RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
+
+        Order orderWithNullDishes = new Order(1000L, 10L, null, OrderStatus.PENDIENTE, null, restaurantId, null);
+
+        when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10))
+                .thenReturn(List.of(orderWithNullDishes));
+
+        // Act
+        List<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10, employeeId);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertNull(result.get(0).getOrderDishes());
+        verifyNoInteractions(dishPersistentPort);
     }
 }

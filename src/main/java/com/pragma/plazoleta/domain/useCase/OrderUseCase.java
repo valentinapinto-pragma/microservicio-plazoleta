@@ -4,14 +4,17 @@ import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
 import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.DishInactiveException;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
+import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.RestaurantEmployee;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
 
@@ -24,13 +27,16 @@ public class OrderUseCase implements OrderServicePort {
     private final OrderPersistentPort orderPersistentPort;
     private final DishPersistentPort dishPersistentPort;
     private final RestaurantPersistentPort restaurantPersistentPort;
+    private final RestaurantEmployeePersistentPort restaurantEmployeePersistentPort;
 
     public OrderUseCase(OrderPersistentPort orderPersistentPort,
                         DishPersistentPort dishPersistentPort,
-                        RestaurantPersistentPort restaurantPersistentPort) {
+                        RestaurantPersistentPort restaurantPersistentPort,
+                        RestaurantEmployeePersistentPort restaurantEmployeePersistentPort) {
         this.orderPersistentPort = orderPersistentPort;
         this.dishPersistentPort = dishPersistentPort;
         this.restaurantPersistentPort = restaurantPersistentPort;
+        this.restaurantEmployeePersistentPort = restaurantEmployeePersistentPort;
     }
 
     @Override
@@ -49,11 +55,64 @@ public class OrderUseCase implements OrderServicePort {
         return orderPersistentPort.save(order);
     }
 
+    @Override
+    public List<Order> getOrdersByStatus(OrderStatus status, int page, int size, Long employeeId) {
+        validateStatusNotNull(status);
+        validatePagination(page, size);
+        validateEmployeeIdNotNull(employeeId);
+
+        RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"));
+
+        List<Order> orders = orderPersistentPort.getOrdersByRestaurantAndStatus(
+                employee.getRestaurantId(),
+                status,
+                page,
+                size
+        );
+
+        enrichOrdersWithDishDetails(orders);
+        return orders;
+    }
+
+    private void validateStatusNotNull(OrderStatus status) {
+        if (status == null) {
+            throw new InvalidOrderDataException("Order status cannot be null");
+        }
+    }
+
+    private void validatePagination(int page, int size) {
+        if (page < 0) {
+            throw new InvalidOrderDataException("The page must be greater than or equal to 0");
+        }
+        if (size <= 0) {
+            throw new InvalidOrderDataException("The page size must be greater than 0");
+        }
+    }
+
+    private void validateEmployeeIdNotNull(Long employeeId) {
+        if (employeeId == null) {
+            throw new InvalidOrderDataException("Employee id cannot be null");
+        }
+    }
+
+    private void enrichOrdersWithDishDetails(List<Order> orders) {
+        for (Order order : orders) {
+            if (order.getOrderDishes() != null) {
+                for (OrderDish orderDish : order.getOrderDishes()) {
+                    dishPersistentPort.findById(orderDish.getDishId())
+                            .ifPresent(orderDish::setDish);
+                }
+            }
+        }
+    }
+
     private void validateOrderHasDishes(Order order) {
         if (order.getOrderDishes() == null || order.getOrderDishes().isEmpty()) {
             throw new InvalidOrderDataException("The order must contain at least one dish");
         }
     }
+
     private void validateClientId(Long clientId) {
         if (clientId == null) {
             throw new InvalidOrderDataException("Client id cannot be null");

@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface OrderPersistentPort extends CrudBase<Order, Long> {
     boolean existsByClientIdAndStatusIn(Long clientId, List<OrderStatus> statuses);
+    List<Order> getOrdersByRestaurantAndStatus(Long restaurantId, OrderStatus status, int page, int size);
 }

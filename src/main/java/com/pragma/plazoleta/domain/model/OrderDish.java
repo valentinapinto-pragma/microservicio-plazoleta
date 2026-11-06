@@ -5,6 +5,7 @@ public class OrderDish {
     private Long orderId;
     private Long dishId;
     private Integer quantity;
+    private Dish dish;
 
     public OrderDish() {
     }
@@ -14,6 +15,14 @@ public class OrderDish {
         this.orderId = orderId;
         this.dishId = dishId;
         this.quantity = quantity;
+    }
+
+    public OrderDish(Long id, Long orderId, Long dishId, Integer quantity, Dish dish) {
+        this.id = id;
+        this.orderId = orderId;
+        this.dishId = dishId;
+        this.quantity = quantity;
+        this.dish = dish;
     }
 
     public Long getId() {
@@ -46,5 +55,13 @@ public class OrderDish {
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
+    }
+
+    public Dish getDish() {
+        return dish;
+    }
+
+    public void setDish(Dish dish) {
+        this.dish = dish;
     }
 }

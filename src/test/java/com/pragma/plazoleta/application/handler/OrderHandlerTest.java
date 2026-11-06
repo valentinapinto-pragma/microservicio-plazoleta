@@ -2,6 +2,7 @@ package com.pragma.plazoleta.application.handler;
 
 import com.pragma.plazoleta.application.dto.request.OrderDishRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
+import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
 import com.pragma.plazoleta.domain.model.Order;
@@ -77,5 +78,31 @@ class OrderHandlerTest {
         assertEquals(1L, result.get(0).getId());
         verify(orderServicePort, times(1)).getOrdersByStatus(status, page, size, employeeId);
         verify(orderDtoMapper, times(1)).toResponseDtoList(List.of(order));
+    }
+
+    @Test
+    @DisplayName("Should assign order through service port and map to response DTO")
+    void shouldAssignOrderSuccessfully() {
+        // Arrange
+        Long orderId = 100L;
+        Long employeeId = 3L;
+        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
+
+        Order updatedOrder = new Order(orderId, 10L, null, OrderStatus.EN_PREPARACION, employeeId, 1L, List.of());
+        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.EN_PREPARACION, employeeId, 1L, List.of());
+
+        when(orderServicePort.assignOrder(orderId, OrderStatus.EN_PREPARACION, employeeId)).thenReturn(updatedOrder);
+        when(orderDtoMapper.toResponseDto(updatedOrder)).thenReturn(responseDto);
+
+        // Act
+        OrderResponseDto result = orderHandler.assignOrder(orderId, requestDto, employeeId);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(orderId, result.getId());
+        assertEquals(OrderStatus.EN_PREPARACION, result.getStatus());
+        assertEquals(employeeId, result.getIdChef());
+        verify(orderServicePort, times(1)).assignOrder(orderId, OrderStatus.EN_PREPARACION, employeeId);
+        verify(orderDtoMapper, times(1)).toResponseDto(updatedOrder);
     }
 }

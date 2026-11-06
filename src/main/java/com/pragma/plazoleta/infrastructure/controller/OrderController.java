@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.controller;
 
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
+import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.handler.OrderHandler;
 import com.pragma.plazoleta.domain.model.OrderStatus;
@@ -15,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -66,5 +69,24 @@ public class OrderController {
         Long employeeId = jwtAdapter.extractUserId(authHeader);
         List<OrderResponseDto> orders = orderHandler.getOrdersByStatus(status, page, size, employeeId);
         return ResponseEntity.ok(orders);
+    }
+
+    @Operation(summary = "Assign order to employee and update status to EN_PREPARACION",
+            description = "Allows an authenticated employee to assign an order to themselves and update its status to EN_PREPARACION")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order assigned successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid status transition, order does not belong to employee's restaurant, or employee not assigned to any restaurant", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden: User is not authorized or not an employee", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content)
+    })
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    public ResponseEntity<OrderResponseDto> assignOrder(
+            @PathVariable Long id,
+            @Valid @RequestBody OrderStatusRequestDto orderStatusRequestDto,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        Long employeeId = jwtAdapter.extractUserId(authHeader);
+        OrderResponseDto updatedOrder = orderHandler.assignOrder(id, orderStatusRequestDto, employeeId);
+        return ResponseEntity.ok(updatedOrder);
     }
 }

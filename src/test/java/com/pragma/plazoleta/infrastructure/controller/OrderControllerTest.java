@@ -3,16 +3,11 @@ package com.pragma.plazoleta.infrastructure.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pragma.plazoleta.application.dto.request.OrderDishRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
+import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderDishResponseDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.handler.OrderHandler;
-import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
-import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
-import com.pragma.plazoleta.domain.exception.DishInactiveException;
-import com.pragma.plazoleta.domain.exception.DishNotFoundException;
-import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
-import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
-import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
+import com.pragma.plazoleta.domain.exception.*;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.infrastructure.exceptionhandler.ControllerAdvisor;
 import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
@@ -41,8 +36,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -285,5 +279,124 @@ class OrderControllerTest {
                         .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("The page must be greater than or equal to 0"));
+    }
+
+    // TESTS: PATCH /orders/{id}/status (HU-13)
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 200 OK with updated order when assign order is valid and user is employee")
+    void shouldAssignOrderSuccessfullyWhenUserIsEmployee() throws Exception {
+        Long orderId = 100L;
+        Long employeeId = 3L;
+        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
+
+        OrderDishResponseDto dishDto = new OrderDishResponseDto(100L, "Hamburguesa", 25000, "Rica", "http://img.com/1", "Comida", 2);
+        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, LocalDateTime.now(), OrderStatus.EN_PREPARACION, employeeId, 1L, List.of(dishDto));
+
+        when(jwtAdapter.extractUserId(anyString())).thenReturn(employeeId);
+        when(orderHandler.assignOrder(eq(orderId), any(OrderStatusRequestDto.class), eq(employeeId))).thenReturn(responseDto);
+
+        mockMvc.perform(patch("/orders/{id}/status", orderId)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId))
+                .andExpect(jsonPath("$.status").value("EN_PREPARACION"))
+                .andExpect(jsonPath("$.idChef").value(employeeId))
+                .andExpect(jsonPath("$.dishes[0].name").value("Hamburguesa"));
+
+        verify(jwtAdapter).extractUserId(AUTH_HEADER);
+        verify(orderHandler).assignOrder(eq(orderId), any(OrderStatusRequestDto.class), eq(employeeId));
+    }
+
+    @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 403 Forbidden when user is not an employee on PATCH /orders/{id}/status")
+    void shouldReturnForbiddenWhenUserIsNotEmployeeOnAssignOrder() throws Exception {
+        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
+
+        mockMvc.perform(patch("/orders/{id}/status", 100L)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isForbidden());
+
+        verify(orderHandler, never()).assignOrder(anyLong(), any(), anyLong());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 404 Not Found when order does not exist on assign")
+    void shouldReturnNotFoundWhenOrderNotFoundOnAssign() throws Exception {
+        Long orderId = 999L;
+        Long employeeId = 3L;
+        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
+
+        when(jwtAdapter.extractUserId(anyString())).thenReturn(employeeId);
+        doThrow(new OrderNotFoundException("Order not found with id: 999"))
+                .when(orderHandler).assignOrder(eq(orderId), any(OrderStatusRequestDto.class), eq(employeeId));
+
+        mockMvc.perform(patch("/orders/{id}/status", orderId)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Order not found with id: 999"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 400 Bad Request when order does not belong to employee's restaurant")
+    void shouldReturnBadRequestWhenOrderDoesNotBelongToRestaurantOnAssign() throws Exception {
+        Long orderId = 100L;
+        Long employeeId = 3L;
+        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
+
+        when(jwtAdapter.extractUserId(anyString())).thenReturn(employeeId);
+        doThrow(new OrderDoesNotBelongToRestaurantException("The order does not belong to the restaurant where the employee works"))
+                .when(orderHandler).assignOrder(eq(orderId), any(OrderStatusRequestDto.class), eq(employeeId));
+
+        mockMvc.perform(patch("/orders/{id}/status", orderId)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The order does not belong to the restaurant where the employee works"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 400 Bad Request when order status transition is invalid on assign")
+    void shouldReturnBadRequestWhenInvalidOrderStatusOnAssign() throws Exception {
+        Long orderId = 100L;
+        Long employeeId = 3L;
+        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
+
+        when(jwtAdapter.extractUserId(anyString())).thenReturn(employeeId);
+        doThrow(new InvalidOrderStatusException("Only orders in PENDIENTE status can be assigned to a chef"))
+                .when(orderHandler).assignOrder(eq(orderId), any(OrderStatusRequestDto.class), eq(employeeId));
+
+        mockMvc.perform(patch("/orders/{id}/status", orderId)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Only orders in PENDIENTE status can be assigned to a chef"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 400 Bad Request when status is null in body on assign")
+    void shouldReturnBadRequestWhenStatusIsNullInBodyOnAssign() throws Exception {
+        mockMvc.perform(patch("/orders/{id}/status", 100L)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\": null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("status: Order status cannot be null"));
+
+        verify(orderHandler, never()).assignOrder(anyLong(), any(), anyLong());
     }
 }

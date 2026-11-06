@@ -7,7 +7,10 @@ import com.pragma.plazoleta.domain.exception.DishNotFoundException;
 import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
 import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
+import com.pragma.plazoleta.domain.exception.InvalidOrderStatusException;
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
+import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToRestaurantException;
+import com.pragma.plazoleta.domain.exception.OrderNotFoundException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
 import com.pragma.plazoleta.domain.exception.UserNotOwnerOfRestaurantException;
@@ -83,6 +86,24 @@ public class ControllerAdvisor {
 
     @ExceptionHandler(RestaurantNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleRestaurantNotFoundException(RestaurantNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleOrderNotFoundException(OrderNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(OrderDoesNotBelongToRestaurantException.class)
+    public ResponseEntity<ErrorResponseDto> handleOrderDoesNotBelongToRestaurantException(OrderDoesNotBelongToRestaurantException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidOrderStatusException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvalidOrderStatusException(InvalidOrderStatusException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponseDto(ex.getMessage()));
     }

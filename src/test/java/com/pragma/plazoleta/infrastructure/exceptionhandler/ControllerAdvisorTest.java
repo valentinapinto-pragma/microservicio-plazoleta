@@ -1,16 +1,6 @@
 package com.pragma.plazoleta.infrastructure.exceptionhandler;
 
-import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
-import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
-import com.pragma.plazoleta.domain.exception.DishInactiveException;
-import com.pragma.plazoleta.domain.exception.DishNotFoundException;
-import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
-import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
-import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
-import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
-import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
-import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
-import com.pragma.plazoleta.domain.exception.UserNotOwnerOfRestaurantException;
+import com.pragma.plazoleta.domain.exception.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -192,4 +182,37 @@ class ControllerAdvisorTest {
         assertNotNull(response.getBody());
         assertEquals("Dish is inactive", response.getBody().getMessage());
     }
+    @Test
+    @DisplayName("Should handle OrderNotFoundException")
+    void shouldHandleOrderNotFoundException() {
+        OrderNotFoundException ex = new OrderNotFoundException("Order not found with id: 100");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleOrderNotFoundException(ex);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Order not found with id: 100", response.getBody().getMessage());
+    }
+
+    @Test
+    @DisplayName("Should handle OrderDoesNotBelongToRestaurantException")
+    void shouldHandleOrderDoesNotBelongToRestaurantException() {
+        OrderDoesNotBelongToRestaurantException ex = new OrderDoesNotBelongToRestaurantException("The order does not belong to the restaurant where the employee works");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleOrderDoesNotBelongToRestaurantException(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("The order does not belong to the restaurant where the employee works", response.getBody().getMessage());
+    }
+
+    @Test
+    @DisplayName("Should handle InvalidOrderStatusException")
+    void shouldHandleInvalidOrderStatusException() {
+        InvalidOrderStatusException ex = new InvalidOrderStatusException("Only orders in PENDIENTE status can be assigned to a chef");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleInvalidOrderStatusException(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Only orders in PENDIENTE status can be assigned to a chef", response.getBody().getMessage());
+    }
+
 }

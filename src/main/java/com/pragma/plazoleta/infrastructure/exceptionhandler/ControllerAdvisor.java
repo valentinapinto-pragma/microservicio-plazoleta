@@ -4,6 +4,7 @@ import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
 import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.DishInactiveException;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
+import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
 import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
@@ -52,6 +53,12 @@ public class ControllerAdvisor {
 
     @ExceptionHandler(InvalidOrderDataException.class)
     public ResponseEntity<ErrorResponseDto> handleInvalidOrderDataException(InvalidOrderDataException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EmployeeNotAssignedToRestaurantException.class)
+    public ResponseEntity<ErrorResponseDto> handleEmployeeNotAssignedToRestaurantException(EmployeeNotAssignedToRestaurantException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponseDto(ex.getMessage()));
     }

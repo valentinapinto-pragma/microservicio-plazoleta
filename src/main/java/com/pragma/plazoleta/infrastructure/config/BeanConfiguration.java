@@ -6,6 +6,7 @@ import com.pragma.plazoleta.application.mapper.DishDtoMapper;
 import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
@@ -44,8 +45,9 @@ public class BeanConfiguration {
     @Bean
     public OrderServicePort orderServicePort(OrderPersistentPort orderPersistentPort,
                                              DishPersistentPort dishPersistentPort,
-                                             RestaurantPersistentPort restaurantPersistentPort) {
-        return new OrderUseCase(orderPersistentPort, dishPersistentPort, restaurantPersistentPort);
+                                             RestaurantPersistentPort restaurantPersistentPort,
+                                             RestaurantEmployeePersistentPort restaurantEmployeePersistentPort) {
+        return new OrderUseCase(orderPersistentPort, dishPersistentPort, restaurantPersistentPort, restaurantEmployeePersistentPort);
     }
 
     @Bean

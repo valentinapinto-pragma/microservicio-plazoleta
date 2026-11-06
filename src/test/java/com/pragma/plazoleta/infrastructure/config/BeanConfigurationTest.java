@@ -6,6 +6,7 @@ import com.pragma.plazoleta.application.mapper.DishDtoMapper;
 import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
@@ -39,6 +40,9 @@ class BeanConfigurationTest {
     private OrderPersistentPort orderPersistentPort;
 
     @Mock
+    private RestaurantEmployeePersistentPort restaurantEmployeePersistentPort;
+
+    @Mock
     private OrderDtoMapper orderDtoMapper;
 
     @Test
@@ -49,7 +53,7 @@ class BeanConfigurationTest {
         RestaurantServicePort restaurantBean = config.restaurantServicePort(restaurantPersistentPort, userInformationPort);
         DishServicePort dishBean = config.dishServicePort(dishPersistentPort, restaurantPersistentPort, userInformationPort);
         DishHandler dishHandlerBean = config.dishHandler(dishBean, dishDtoMapper);
-        OrderServicePort orderBean = config.orderServicePort(orderPersistentPort, dishPersistentPort, restaurantPersistentPort);
+        OrderServicePort orderBean = config.orderServicePort(orderPersistentPort, dishPersistentPort, restaurantPersistentPort, restaurantEmployeePersistentPort);
         OrderHandler orderHandlerBean = config.orderHandler(orderBean, orderDtoMapper);
         OpenAPI openAPIBean = config.customOpenAPI();
 

@@ -4,6 +4,7 @@ import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
 import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.DishInactiveException;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
+import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
 import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
@@ -146,6 +147,17 @@ class ControllerAdvisorTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("Invalid order data", response.getBody().getMessage());
+    }
+
+    @Test
+    @DisplayName("Should handle EmployeeNotAssignedToRestaurantException")
+    void shouldHandleEmployeeNotAssignedToRestaurantException() {
+        EmployeeNotAssignedToRestaurantException ex = new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleEmployeeNotAssignedToRestaurantException(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("The employee is not assigned to any restaurant", response.getBody().getMessage());
     }
 
     @Test

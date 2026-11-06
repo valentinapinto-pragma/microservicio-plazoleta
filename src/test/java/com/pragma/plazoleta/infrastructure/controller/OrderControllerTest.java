@@ -3,13 +3,17 @@ package com.pragma.plazoleta.infrastructure.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pragma.plazoleta.application.dto.request.OrderDishRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
+import com.pragma.plazoleta.application.dto.response.OrderDishResponseDto;
+import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.handler.OrderHandler;
 import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
 import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.DishInactiveException;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
+import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
+import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.infrastructure.exceptionhandler.ControllerAdvisor;
 import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
 import com.pragma.plazoleta.infrastructure.security.SecurityConfiguration;
@@ -24,9 +28,12 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -34,6 +41,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -56,6 +64,8 @@ class OrderControllerTest {
     private JwtAdapter jwtAdapter;
 
     private static final String AUTH_HEADER = "Bearer test-jwt-token";
+
+    // TESTS: POST /orders (HU-11)
 
     @Test
     @DisplayName("Should return 201 Created when order is valid and user is client")
@@ -205,5 +215,75 @@ class OrderControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Restaurant not found with id: 999"));
     }
-}
 
+    // TESTS: GET /orders (HU-12)
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 200 OK with orders list when request is valid and user is employee")
+    void shouldReturnOkWhenGetOrdersByStatusValid() throws Exception {
+        OrderDishResponseDto dishDto = new OrderDishResponseDto(100L, "Hamburguesa", 25000, "Rica", "http://img.com/1", "Comida", 2);
+        OrderResponseDto orderDto = new OrderResponseDto(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 2L, List.of(dishDto));
+
+        when(jwtAdapter.extractUserId(anyString())).thenReturn(50L);
+        when(orderHandler.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10, 50L)).thenReturn(List.of(orderDto));
+
+        mockMvc.perform(get("/orders")
+                        .param("status", "PENDIENTE")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$[0].idClient").value(10L))
+                .andExpect(jsonPath("$[0].status").value("PENDIENTE"))
+                .andExpect(jsonPath("$[0].idRestaurant").value(2L))
+                .andExpect(jsonPath("$[0].dishes[0].name").value("Hamburguesa"))
+                .andExpect(jsonPath("$[0].dishes[0].quantity").value(2));
+
+        verify(jwtAdapter).extractUserId(AUTH_HEADER);
+        verify(orderHandler).getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10, 50L);
+    }
+
+    @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 403 Forbidden when user is not an employee on GET /orders")
+    void shouldReturnForbiddenWhenUserIsNotEmployeeOnGetOrders() throws Exception {
+        mockMvc.perform(get("/orders")
+                        .param("status", "PENDIENTE")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER))
+                .andExpect(status().isForbidden());
+
+        verify(orderHandler, never()).getOrdersByStatus(any(), anyInt(), anyInt(), anyLong());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 400 Bad Request when employee is not assigned to any restaurant")
+    void shouldReturnBadRequestWhenEmployeeNotAssignedToRestaurant() throws Exception {
+        when(jwtAdapter.extractUserId(anyString())).thenReturn(50L);
+        doThrow(new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"))
+                .when(orderHandler).getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10, 50L);
+
+        mockMvc.perform(get("/orders")
+                        .param("status", "PENDIENTE")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The employee is not assigned to any restaurant"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 400 Bad Request when pagination parameters are invalid")
+    void shouldReturnBadRequestWhenPaginationInvalid() throws Exception {
+        when(jwtAdapter.extractUserId(anyString())).thenReturn(50L);
+        doThrow(new InvalidOrderDataException("The page must be greater than or equal to 0"))
+                .when(orderHandler).getOrdersByStatus(OrderStatus.PENDIENTE, -1, 10, 50L);
+
+        mockMvc.perform(get("/orders")
+                        .param("status", "PENDIENTE")
+                        .param("page", "-1")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The page must be greater than or equal to 0"));
+    }
+}

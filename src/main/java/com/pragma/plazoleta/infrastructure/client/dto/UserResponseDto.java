@@ -14,6 +14,7 @@ public class UserResponseDto {
     private String name;
     private String lastName;
     private String email;
+    private String phoneNumber;
     private Long roleId;
     private RoleResponseDto role;
 }

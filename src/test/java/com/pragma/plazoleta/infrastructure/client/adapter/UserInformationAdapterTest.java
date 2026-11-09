@@ -41,7 +41,7 @@ class UserInformationAdapterTest {
         RequestContextHolder.resetRequestAttributes();
     }
 
-    // --- Pruebas de isValidOwner (Feign Client) ---
+    //Pruebas de isValidOwner (Feign Client)
 
     @Test
     @DisplayName("Should return true when user has owner role via roleId")
@@ -114,7 +114,7 @@ class UserInformationAdapterTest {
         assertFalse(result);
     }
 
-    // --- Pruebas de getAuthenticatedUserId (RequestContext & JWT) ---
+    //Pruebas de getAuthenticatedUserId (RequestContext & JWT)
 
     @Test
     @DisplayName("Should successfully extract authenticated user ID from active request context")
@@ -187,5 +187,48 @@ class UserInformationAdapterTest {
         );
         assertEquals("El token JWT proporcionado es inválido o ha expirado", exception.getMessage());
         verify(jwtAdapter, never()).extractUserId(any());
+    }
+
+    //Pruebas de getClientPhoneNumber (HU-14)
+    @Test
+    @DisplayName("Should return phone number when user exists and has phone")
+    void shouldReturnPhoneNumberWhenUserExists() {
+        UserResponseDto user = new UserResponseDto();
+        user.setId(10L);
+        user.setPhoneNumber("+573001234567");
+
+        when(userFeignClient.getUserById(10L)).thenReturn(user);
+
+        String phone = userInformationAdapter.getClientPhoneNumber(10L);
+
+        assertEquals("+573001234567", phone);
+        verify(userFeignClient).getUserById(10L);
+    }
+
+    @Test
+    @DisplayName("Should return null when user is null on getPhoneNumber")
+    void shouldReturnNullWhenUserIsNullOnGetPhoneNumber() {
+        when(userFeignClient.getUserById(10L)).thenReturn(null);
+
+        String phone = userInformationAdapter.getClientPhoneNumber(10L);
+
+        assertNull(phone);
+    }
+
+    @Test
+    @DisplayName("Should return null when user not found in feign client on getPhoneNumber")
+    void shouldReturnNullWhenUserNotFoundOnGetPhoneNumber() {
+        Request request = Request.create(
+                Request.HttpMethod.GET,
+                "/users/99",
+                Collections.emptyMap(),
+                null,
+                new RequestTemplate()
+        );
+        when(userFeignClient.getUserById(99L)).thenThrow(new FeignException.NotFound("User not found", request, null, null));
+
+        String phone = userInformationAdapter.getClientPhoneNumber(99L);
+
+        assertNull(phone);
     }
 }

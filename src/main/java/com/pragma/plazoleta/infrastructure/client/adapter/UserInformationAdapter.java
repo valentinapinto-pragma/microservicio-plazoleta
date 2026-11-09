@@ -8,15 +8,11 @@ import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
-
-import static org.springframework.security.core.context.SecurityContextHolder.getContext;
 
 @Component
 @RequiredArgsConstructor
@@ -35,6 +31,7 @@ public class UserInformationAdapter implements UserInformationPort {
         }
     }
 
+    @Override
     public Long getAuthenticatedUserId() {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 
@@ -58,6 +55,16 @@ public class UserInformationAdapter implements UserInformationPort {
         return jwtAdapter.extractUserId(token);
     }
 
+    @Override
+    public String getClientPhoneNumber(Long clientId) {
+        try {
+            UserResponseDto user = userFeignClient.getUserById(clientId);
+            return user != null ? user.getPhoneNumber() : null;
+        } catch (FeignException.NotFound e) {
+            return null;
+        }
+    }
+
     private boolean isOwnerRole(UserResponseDto user) {
         if (user == null) {
             return false;
@@ -67,5 +74,4 @@ public class UserInformationAdapter implements UserInformationPort {
         }
         return user.getRole() != null && RoleEnum.OWNER.getId().equals(user.getRole().getId());
     }
-
 }

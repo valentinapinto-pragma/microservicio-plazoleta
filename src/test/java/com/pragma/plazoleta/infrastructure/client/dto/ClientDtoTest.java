@@ -3,7 +3,7 @@ package com.pragma.plazoleta.infrastructure.client.dto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ClientDtoTest {
 
@@ -21,11 +21,12 @@ class ClientDtoTest {
         roleEmpty.setDescription("Rol admin");
         assertEquals(1L, roleEmpty.getId());
 
-        UserResponseDto user = new UserResponseDto(5L, "Juan", "Perez", "juan@correo.com", 2L, role);
+        UserResponseDto user = new UserResponseDto(5L, "Juan", "Perez", "juan@correo.com", "+573001234567", 2L, role);
         assertEquals(5L, user.getId());
         assertEquals("Juan", user.getName());
         assertEquals("Perez", user.getLastName());
         assertEquals("juan@correo.com", user.getEmail());
+        assertEquals("+573001234567", user.getPhoneNumber());
         assertEquals(2L, user.getRoleId());
         assertEquals(role, user.getRole());
 
@@ -34,8 +35,10 @@ class ClientDtoTest {
         userEmpty.setName("Maria");
         userEmpty.setLastName("Gomez");
         userEmpty.setEmail("maria@correo.com");
+        userEmpty.setPhoneNumber("+573009876543");
         userEmpty.setRoleId(2L);
         userEmpty.setRole(role);
         assertEquals(6L, userEmpty.getId());
+        assertEquals("+573009876543", userEmpty.getPhoneNumber());
     }
 }

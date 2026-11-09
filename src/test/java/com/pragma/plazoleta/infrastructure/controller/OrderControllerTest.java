@@ -31,11 +31,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -398,5 +394,68 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.message").value("status: Order status cannot be null"));
 
         verify(orderHandler, never()).assignOrder(anyLong(), any(), anyLong());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 200 OK when employee updates order to ready via PATCH /orders/{id}/ready")
+    void shouldReturnOkWhenUpdateOrderToReady() throws Exception {
+        Long orderId = 1L;
+        Long employeeId = 5L;
+
+        OrderResponseDto responseDto = new OrderResponseDto(
+                orderId, 10L, LocalDateTime.now(), OrderStatus.LISTO, employeeId, 1L, List.of(), "123456"
+        );
+
+        when(jwtAdapter.extractUserId(AUTH_HEADER)).thenReturn(employeeId);
+        when(orderHandler.updateOrderToReady(orderId, employeeId)).thenReturn(responseDto);
+
+        mockMvc.perform(patch("/orders/{id}/ready", orderId)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId))
+                .andExpect(jsonPath("$.status").value("LISTO"))
+                .andExpect(jsonPath("$.securityPin").value("123456"));
+
+        verify(orderHandler, times(1)).updateOrderToReady(orderId, employeeId);
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 200 OK when employee updates order to ready via PATCH /orders/{id}/status with LISTO")
+    void shouldReturnOkWhenUpdateOrderStatusToListo() throws Exception {
+        Long orderId = 1L;
+        Long employeeId = 5L;
+        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.LISTO);
+
+        OrderResponseDto responseDto = new OrderResponseDto(
+                orderId, 10L, LocalDateTime.now(), OrderStatus.LISTO, employeeId, 1L, List.of(), "654321"
+        );
+
+        when(jwtAdapter.extractUserId(AUTH_HEADER)).thenReturn(employeeId);
+        when(orderHandler.updateOrderToReady(orderId, employeeId)).thenReturn(responseDto);
+
+        mockMvc.perform(patch("/orders/{id}/status", orderId)
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId))
+                .andExpect(jsonPath("$.status").value("LISTO"))
+                .andExpect(jsonPath("$.securityPin").value("654321"));
+
+        verify(orderHandler, times(1)).updateOrderToReady(orderId, employeeId);
+    }
+
+    @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 403 Forbidden when client tries to mark order as ready")
+    void shouldReturnForbiddenWhenClientMarksOrderReady() throws Exception {
+        mockMvc.perform(patch("/orders/1/ready")
+                        .header(HttpHeaders.AUTHORIZATION, AUTH_HEADER))
+                .andExpect(status().isForbidden());
+
+        verify(orderHandler, never()).updateOrderToReady(anyLong(), anyLong());
     }
 }

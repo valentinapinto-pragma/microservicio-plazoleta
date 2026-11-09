@@ -22,7 +22,12 @@ spring:
 jwt:
   secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
 
-# Configuración para comunicarnos con el microservicio de usuarios (OpenFeign)
+# comunicacion con el microservicio de usuarios (OpenFeign)
 services:
   users:
     url: http://localhost:8081/users
+
+telegram:
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN:9061725449:AAF6beBpDha8Dwb7Y5P1amfErmQSMD3fLY8}
+    chat-id: ${TELEGRAM_CHAT_ID:1833923415}

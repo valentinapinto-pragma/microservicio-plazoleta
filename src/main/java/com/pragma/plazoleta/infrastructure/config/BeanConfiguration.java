@@ -5,6 +5,7 @@ import com.pragma.plazoleta.application.handler.OrderHandler;
 import com.pragma.plazoleta.application.mapper.DishDtoMapper;
 import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.MessageNotificationPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
@@ -20,9 +21,15 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class BeanConfiguration {
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
 
     @Bean
     public RestaurantServicePort restaurantServicePort(RestaurantPersistentPort restaurantPersistentPort,
@@ -46,8 +53,10 @@ public class BeanConfiguration {
     public OrderServicePort orderServicePort(OrderPersistentPort orderPersistentPort,
                                              DishPersistentPort dishPersistentPort,
                                              RestaurantPersistentPort restaurantPersistentPort,
-                                             RestaurantEmployeePersistentPort restaurantEmployeePersistentPort) {
-        return new OrderUseCase(orderPersistentPort, dishPersistentPort, restaurantPersistentPort, restaurantEmployeePersistentPort);
+                                             RestaurantEmployeePersistentPort restaurantEmployeePersistentPort,
+                                             UserInformationPort userInformationPort,
+                                             MessageNotificationPort messageNotificationPort) {
+        return new OrderUseCase(orderPersistentPort, dishPersistentPort, restaurantPersistentPort, restaurantEmployeePersistentPort, userInformationPort, messageNotificationPort);
     }
 
     @Bean

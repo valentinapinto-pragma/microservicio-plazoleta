@@ -71,22 +71,44 @@ public class OrderController {
         return ResponseEntity.ok(orders);
     }
 
-    @Operation(summary = "Assign order to employee and update status to EN_PREPARACION",
-            description = "Allows an authenticated employee to assign an order to themselves and update its status to EN_PREPARACION")
+    @Operation(summary = "Assign order to employee or update order status",
+            description = "Allows an authenticated employee to update order status (EN_PREPARACION to assign, or LISTO to mark ready)")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Order assigned successfully"),
+            @ApiResponse(responseCode = "200", description = "Order status updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid status transition, order does not belong to employee's restaurant, or employee not assigned to any restaurant", content = @Content),
             @ApiResponse(responseCode = "403", description = "Forbidden: User is not authorized or not an employee", content = @Content),
             @ApiResponse(responseCode = "404", description = "Order not found", content = @Content)
     })
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('EMPLOYEE')")
-    public ResponseEntity<OrderResponseDto> assignOrder(
+    public ResponseEntity<OrderResponseDto> updateOrderStatus(
             @PathVariable Long id,
             @Valid @RequestBody OrderStatusRequestDto orderStatusRequestDto,
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
         Long employeeId = jwtAdapter.extractUserId(authHeader);
+        if (orderStatusRequestDto.getStatus() == OrderStatus.LISTO) {
+            OrderResponseDto updatedOrder = orderHandler.updateOrderToReady(id, employeeId);
+            return ResponseEntity.ok(updatedOrder);
+        }
         OrderResponseDto updatedOrder = orderHandler.assignOrder(id, orderStatusRequestDto, employeeId);
+        return ResponseEntity.ok(updatedOrder);
+    }
+
+    @Operation(summary = "Mark order as ready and notify client",
+            description = "Allows an authenticated employee to mark an in-preparation order as LISTO, generating a security PIN and notifying the client")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order marked as LISTO successfully and client notified via messaging"),
+            @ApiResponse(responseCode = "400", description = "Invalid status transition or order does not belong to employee's restaurant", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden: User is not authorized or not an employee", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content)
+    })
+    @PatchMapping("/{id}/ready")
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    public ResponseEntity<OrderResponseDto> updateOrderToReady(
+            @PathVariable Long id,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        Long employeeId = jwtAdapter.extractUserId(authHeader);
+        OrderResponseDto updatedOrder = orderHandler.updateOrderToReady(id, employeeId);
         return ResponseEntity.ok(updatedOrder);
     }
 }

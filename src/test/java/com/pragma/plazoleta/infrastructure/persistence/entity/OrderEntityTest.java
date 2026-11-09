@@ -7,13 +7,14 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class OrderEntityTest {
 
     @Test
-    @DisplayName("Should test OrderEntity constructors, getters and setters")
-    void testOrderEntity() {
+    @DisplayName("Should test OrderEntity getters, setters and constructors")
+    void shouldTestGettersAndSetters() {
         LocalDateTime now = LocalDateTime.now();
         OrderEntity entity = new OrderEntity(1L, 10L, now, OrderStatus.PENDIENTE, 5L, 2L, new ArrayList<>());
 
@@ -23,12 +24,26 @@ class OrderEntityTest {
         assertEquals(OrderStatus.PENDIENTE, entity.getStatus());
         assertEquals(5L, entity.getIdChef());
         assertEquals(2L, entity.getIdRestaurant());
-        assertNotNull(entity.getOrderDishes());
+        assertEquals(0, entity.getOrderDishes().size());
+        assertNull(entity.getSecurityPin());
 
         OrderEntity empty = new OrderEntity();
         empty.setId(2L);
+        empty.setIdClient(20L);
+        empty.setDate(now);
         empty.setStatus(OrderStatus.EN_PREPARACION);
+        empty.setIdChef(6L);
+        empty.setIdRestaurant(3L);
+        empty.setOrderDishes(new ArrayList<>());
+        empty.setSecurityPin("999888");
+
         assertEquals(2L, empty.getId());
+        assertEquals(20L, empty.getIdClient());
+        assertEquals(now, empty.getDate());
         assertEquals(OrderStatus.EN_PREPARACION, empty.getStatus());
+        assertEquals(6L, empty.getIdChef());
+        assertEquals(3L, empty.getIdRestaurant());
+        assertEquals(0, empty.getOrderDishes().size());
+        assertEquals("999888", empty.getSecurityPin());
     }
 }

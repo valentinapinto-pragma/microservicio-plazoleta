@@ -40,4 +40,11 @@ public class OrderEntity {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<OrderDishEntity> orderDishes;
+
+    @Column(name = "security_pin")
+    private String securityPin;
+
+    public OrderEntity(Long id, Long idClient, LocalDateTime date, OrderStatus status, Long idChef, Long idRestaurant, List<OrderDishEntity> orderDishes) {
+        this(id, idClient, date, status, idChef, idRestaurant, orderDishes, null);
+    }
 }

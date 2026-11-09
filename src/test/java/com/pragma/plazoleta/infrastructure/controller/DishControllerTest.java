@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pragma.plazoleta.application.dto.request.DishRequestDto;
 import com.pragma.plazoleta.application.dto.request.DishStatusRequestDto;
 import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
+import com.pragma.plazoleta.application.dto.response.DishResponseDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.handler.DishHandler;
 import com.pragma.plazoleta.domain.exception.DishNotFoundException;
 import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
@@ -22,17 +24,13 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.pragma.plazoleta.application.dto.response.DishResponseDto;
 import java.util.List;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.when;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -73,7 +71,7 @@ class DishControllerTest {
     @WithMockUser(roles = "CLIENT")
     @DisplayName("Should return 403 Forbidden when client tries to create dish")
     void shouldReturnForbiddenWhenClientCreatesDish() throws Exception {
-        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Carne", "https://img.com/burger.png", 1L, 1L);
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", 1L, 1L);
 
         mockMvc.perform(post("/dishes")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -84,22 +82,100 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 Bad Request when validation fails on create")
-    void shouldReturnBadRequestWhenValidationFails() throws Exception {
-        DishRequestDto invalidDto = new DishRequestDto();
+    @DisplayName("Should return 400 Bad Request when dish name is null")
+    void shouldReturnBadRequestWhenNameIsNull() throws Exception {
+        DishRequestDto dto = new DishRequestDto(null, 15000, "Deliciosa carne", "https://img.com/burger.png", 1L, 1L);
 
         mockMvc.perform(post("/dishes")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidDto)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
 
         verify(dishHandler, never()).createDish(any());
     }
 
     @Test
-    @DisplayName("Should return 400 Bad Request when restaurant does not exist on create")
-    void shouldReturnBadRequestWhenRestaurantNotFound() throws Exception {
-        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Carne", "https://img.com/burger.png", 1L, 999L);
+    @DisplayName("Should return 400 Bad Request when category ID is null")
+    void shouldReturnBadRequestWhenCategoryIdIsNull() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", null, 1L);
+
+        mockMvc.perform(post("/dishes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+
+        verify(dishHandler, never()).createDish(any());
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when price is null")
+    void shouldReturnBadRequestWhenPriceIsNull() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", null, "Deliciosa carne", "https://img.com/burger.png", 1L, 1L);
+
+        mockMvc.perform(post("/dishes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+
+        verify(dishHandler, never()).createDish(any());
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when price is zero or negative")
+    void shouldReturnBadRequestWhenPriceIsZeroOrNegative() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 0, "Deliciosa carne", "https://img.com/burger.png", 1L, 1L);
+
+        mockMvc.perform(post("/dishes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+
+        verify(dishHandler, never()).createDish(any());
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when description is blank")
+    void shouldReturnBadRequestWhenDescriptionIsBlank() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "", "https://img.com/burger.png", 1L, 1L);
+
+        mockMvc.perform(post("/dishes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+
+        verify(dishHandler, never()).createDish(any());
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when URL image is blank")
+    void shouldReturnBadRequestWhenUrlImageIsBlank() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Deliciosa carne", "", 1L, 1L);
+
+        mockMvc.perform(post("/dishes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+
+        verify(dishHandler, never()).createDish(any());
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when restaurant ID is null")
+    void shouldReturnBadRequestWhenRestaurantIdIsNull() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", 1L, null);
+
+        mockMvc.perform(post("/dishes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+
+        verify(dishHandler, never()).createDish(any());
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when handler throws RestaurantNotFoundException on create")
+    void shouldReturnBadRequestWhenRestaurantNotFoundOnCreate() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", 1L, 99L);
 
         doThrow(new RestaurantNotFoundException("The restaurant associated with the dish does not exist"))
                 .when(dishHandler).createDish(any(DishRequestDto.class));
@@ -112,9 +188,9 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 403 Forbidden when user is not owner of restaurant on create")
-    void shouldReturnForbiddenWhenNotOwnerOnCreate() throws Exception {
-        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Carne", "https://img.com/burger.png", 1L, 1L);
+    @DisplayName("Should return 403 Forbidden when handler throws UserNotOwnerOfRestaurantException on create")
+    void shouldReturnForbiddenWhenUserNotOwnerOnCreate() throws Exception {
+        DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", 1L, 1L);
 
         doThrow(new UserNotOwnerOfRestaurantException("The user is not the owner of the restaurant to which the dish belongs"))
                 .when(dishHandler).createDish(any(DishRequestDto.class));
@@ -127,8 +203,8 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 200 OK when dish is updated successfully by owner")
-    void shouldReturnOkWhenDishUpdated() throws Exception {
+    @DisplayName("Should return 200 OK when dish is updated successfully by restaurant owner")
+    void shouldReturnOkWhenDishUpdatedSuccessfully() throws Exception {
         UpdateDishRequestDto updateDto = new UpdateDishRequestDto(20000, "Nueva descripcion");
 
         doNothing().when(dishHandler).updateDish(eq(1L), any(UpdateDishRequestDto.class));
@@ -259,19 +335,25 @@ class DishControllerTest {
     @DisplayName("Should return 200 OK when getting dishes by restaurant successfully")
     void shouldReturnOkWhenGettingDishesByRestaurant() throws Exception {
         DishResponseDto responseDto = new DishResponseDto(1L, "Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", "Comidas Rapidas");
+        PaginationResponseDto<DishResponseDto> paginationResponseDto =
+                new PaginationResponseDto<>(List.of(responseDto), 0, 10, 1L, 1);
 
         when(dishHandler.getDishesByRestaurant(eq(1L), isNull(), eq(0), eq(10)))
-                .thenReturn(List.of(responseDto));
+                .thenReturn(paginationResponseDto);
 
         mockMvc.perform(get("/dishes")
                         .param("idRestaurant", "1")
                         .param("page", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1L))
-                .andExpect(jsonPath("$[0].name").value("Hamburguesa"))
-                .andExpect(jsonPath("$[0].price").value(15000))
-                .andExpect(jsonPath("$[0].category").value("Comidas Rapidas"));
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].name").value("Hamburguesa"))
+                .andExpect(jsonPath("$.content[0].price").value(15000))
+                .andExpect(jsonPath("$.content[0].category").value("Comidas Rapidas"))
+                .andExpect(jsonPath("$.currentPage").value(0))
+                .andExpect(jsonPath("$.pageSize").value(10))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1));
 
         verify(dishHandler).getDishesByRestaurant(eq(1L), isNull(), eq(0), eq(10));
     }

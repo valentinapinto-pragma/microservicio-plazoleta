@@ -2,6 +2,7 @@ package com.pragma.plazoleta.infrastructure.controller;
 
 import com.pragma.plazoleta.application.dto.request.RestaurantEmployeeRequestDto;
 import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
 import com.pragma.plazoleta.application.handler.RestaurantEmployeeHandler;
 import com.pragma.plazoleta.application.handler.RestaurantHandler;
@@ -22,7 +23,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("/restaurants")
@@ -50,7 +50,7 @@ public class RestaurantController {
             @ApiResponse(responseCode = "400", description = "Invalid pagination parameters", content = @Content)
     })
     @GetMapping
-    public ResponseEntity<List<RestaurantResponseDto>> getRestaurants(
+    public ResponseEntity<PaginationResponseDto<RestaurantResponseDto>> getRestaurants(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(restaurantHandler.getRestaurants(page, size));

@@ -4,6 +4,7 @@ import com.pragma.plazoleta.application.dto.request.DishRequestDto;
 import com.pragma.plazoleta.application.dto.request.DishStatusRequestDto;
 import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
 import com.pragma.plazoleta.application.dto.response.DishResponseDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.handler.DishHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,7 +17,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("/dishes")
@@ -61,7 +61,7 @@ public class DishController {
             @ApiResponse(responseCode = "404", description = "Dish or restaurant not found", content = @Content)
     })
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasRole('OWNER')") //delegar val de rol a spring
+    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<Void> changeDishStatus(
             @PathVariable Long id,
             @Valid @RequestBody DishStatusRequestDto dishStatusRequestDto) {
@@ -76,7 +76,7 @@ public class DishController {
             @ApiResponse(responseCode = "404", description = "Restaurant not found", content = @Content)
     })
     @GetMapping
-    public ResponseEntity<List<DishResponseDto>> getDishesByRestaurant(
+    public ResponseEntity<PaginationResponseDto<DishResponseDto>> getDishesByRestaurant(
             @RequestParam Long idRestaurant,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(defaultValue = "0") int page,

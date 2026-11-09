@@ -3,13 +3,13 @@ package com.pragma.plazoleta.infrastructure.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pragma.plazoleta.application.dto.request.RestaurantEmployeeRequestDto;
 import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
 import com.pragma.plazoleta.application.handler.RestaurantEmployeeHandler;
 import com.pragma.plazoleta.application.handler.RestaurantHandler;
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
 import com.pragma.plazoleta.infrastructure.exceptionhandler.ControllerAdvisor;
-import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,9 +40,6 @@ class RestaurantControllerTest {
 
     @Mock
     private RestaurantEmployeeHandler restaurantEmployeeHandler;
-
-    @Mock
-    private JwtAdapter jwtAdapter;
 
     @InjectMocks
     private RestaurantController restaurantController;
@@ -77,7 +74,6 @@ class RestaurantControllerTest {
 
         verify(restaurantHandler).createRestaurant(any(RestaurantRequestDto.class));
     }
-
 
     @Test
     @DisplayName("Should return 400 Bad Request when validation fails")
@@ -140,15 +136,21 @@ class RestaurantControllerTest {
     @DisplayName("Should return 200 OK and list of restaurants when getRestaurants is called")
     void shouldReturnOkAndRestaurantList() throws Exception {
         RestaurantResponseDto responseDto = new RestaurantResponseDto("Crepes & Waffles", "https://logo.png");
-        when(restaurantHandler.getRestaurants(0, 10)).thenReturn(List.of(responseDto));
+        PaginationResponseDto<RestaurantResponseDto> paginationResponseDto =
+                new PaginationResponseDto<>(List.of(responseDto), 0, 10, 1L, 1);
+        when(restaurantHandler.getRestaurants(0, 10)).thenReturn(paginationResponseDto);
 
         mockMvc.perform(get("/restaurants")
                         .param("page", "0")
                         .param("size", "10")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Crepes & Waffles"))
-                .andExpect(jsonPath("$[0].urlLogo").value("https://logo.png"));
+                .andExpect(jsonPath("$.content[0].name").value("Crepes & Waffles"))
+                .andExpect(jsonPath("$.content[0].urlLogo").value("https://logo.png"))
+                .andExpect(jsonPath("$.currentPage").value(0))
+                .andExpect(jsonPath("$.pageSize").value(10))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1));
 
         verify(restaurantHandler).getRestaurants(0, 10);
     }
@@ -156,14 +158,19 @@ class RestaurantControllerTest {
     @Test
     @DisplayName("Should return 200 OK with default pagination when parameters are omitted")
     void shouldReturnOkWithDefaultPagination() throws Exception {
-        when(restaurantHandler.getRestaurants(0, 10)).thenReturn(List.of());
+        PaginationResponseDto<RestaurantResponseDto> emptyPage =
+                new PaginationResponseDto<>(List.of(), 0, 10, 0L, 0);
+        when(restaurantHandler.getRestaurants(0, 10)).thenReturn(emptyPage);
 
         mockMvc.perform(get("/restaurants")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").value(0));
 
         verify(restaurantHandler).getRestaurants(0, 10);
     }
+
     @Test
     @DisplayName("Should return 201 Created when employee is assigned successfully")
     void shouldReturn201WhenAssignEmployeeSuccessfully() throws Exception {

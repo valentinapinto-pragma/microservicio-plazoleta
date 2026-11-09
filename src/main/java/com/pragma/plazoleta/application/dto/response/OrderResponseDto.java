@@ -21,4 +21,9 @@ public class OrderResponseDto {
     private Long idChef;
     private Long idRestaurant;
     private List<OrderDishResponseDto> dishes;
+    private String securityPin;
+
+    public OrderResponseDto(Long id, Long idClient, LocalDateTime date, OrderStatus status, Long idChef, Long idRestaurant, List<OrderDishResponseDto> dishes) {
+        this(id, idClient, date, status, idChef, idRestaurant, dishes, null);
+    }
 }

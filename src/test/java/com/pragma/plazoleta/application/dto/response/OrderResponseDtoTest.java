@@ -52,8 +52,14 @@ class OrderResponseDtoTest {
         assertEquals(5L, orderDto.getIdChef());
         assertEquals(2L, orderDto.getIdRestaurant());
         assertEquals(1, orderDto.getDishes().size());
+        assertNull(orderDto.getSecurityPin());
 
-        // Test Setters & NoArgsConstructor
+        // Test Setters & NoArgsConstructor & SecurityPin
+        OrderResponseDto orderWithPin = new OrderResponseDto(
+                1L, 10L, now, OrderStatus.LISTO, 5L, 2L, List.of(dishDto), "123456"
+        );
+        assertEquals("123456", orderWithPin.getSecurityPin());
+
         OrderDishResponseDto emptyDish = new OrderDishResponseDto();
         emptyDish.setIdDish(200L);
         emptyDish.setName("Pizza");
@@ -63,7 +69,9 @@ class OrderResponseDtoTest {
         OrderResponseDto emptyOrder = new OrderResponseDto();
         emptyOrder.setId(2L);
         emptyOrder.setStatus(OrderStatus.EN_PREPARACION);
+        emptyOrder.setSecurityPin("654321");
         assertEquals(2L, emptyOrder.getId());
         assertEquals(OrderStatus.EN_PREPARACION, emptyOrder.getStatus());
+        assertEquals("654321", emptyOrder.getSecurityPin());
     }
 }

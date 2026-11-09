@@ -35,4 +35,9 @@ public class OrderHandler {
         Order updatedOrder = orderServicePort.assignOrder(orderId, requestDto.getStatus(), employeeId);
         return orderDtoMapper.toResponseDto(updatedOrder);
     }
+
+    public OrderResponseDto updateOrderToReady(Long orderId, Long employeeId) {
+        Order updatedOrder = orderServicePort.updateOrderToReady(orderId, employeeId);
+        return orderDtoMapper.toResponseDto(updatedOrder);
+    }
 }

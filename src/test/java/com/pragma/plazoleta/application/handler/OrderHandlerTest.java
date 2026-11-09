@@ -105,4 +105,27 @@ class OrderHandlerTest {
         verify(orderServicePort, times(1)).assignOrder(orderId, OrderStatus.EN_PREPARACION, employeeId);
         verify(orderDtoMapper, times(1)).toResponseDto(updatedOrder);
     }
+    @Test
+    @DisplayName("Should update order to ready through service port and map to response DTO")
+    void shouldUpdateOrderToReadySuccessfully() {
+        Long orderId = 100L;
+        Long employeeId = 3L;
+
+        Order readyOrder = new Order(orderId, 10L, null, OrderStatus.LISTO, employeeId, 1L, List.of(), "123456");
+        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.LISTO, employeeId, 1L, List.of(), "123456");
+
+        when(orderServicePort.updateOrderToReady(orderId, employeeId)).thenReturn(readyOrder);
+        when(orderDtoMapper.toResponseDto(readyOrder)).thenReturn(responseDto);
+
+        // Act
+        OrderResponseDto result = orderHandler.updateOrderToReady(orderId, employeeId);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(orderId, result.getId());
+        assertEquals(OrderStatus.LISTO, result.getStatus());
+        assertEquals("123456", result.getSecurityPin());
+        verify(orderServicePort, times(1)).updateOrderToReady(orderId, employeeId);
+        verify(orderDtoMapper, times(1)).toResponseDto(readyOrder);
+    }
 }

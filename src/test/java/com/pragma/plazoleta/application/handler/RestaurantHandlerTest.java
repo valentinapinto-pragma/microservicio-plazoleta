@@ -1,8 +1,10 @@
 package com.pragma.plazoleta.application.handler;
 
 import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
 import com.pragma.plazoleta.application.mapper.RestaurantDtoMapper;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.servicePort.RestaurantServicePort;
 import org.junit.jupiter.api.DisplayName;
@@ -61,6 +63,7 @@ class RestaurantHandlerTest {
         verify(restaurantDtoMapper).toDomain(requestDto);
         verify(restaurantServicePort).createRestaurant(domainRestaurant);
     }
+
     @Test
     @DisplayName("Should successfully get paged restaurants from service port and map to response DTOs")
     void shouldGetRestaurantsSuccessfully() {
@@ -69,17 +72,22 @@ class RestaurantHandlerTest {
         int size = 5;
         Restaurant domainRestaurant = new Restaurant(1L, "Restaurante La 80", "123456789", "Calle 10", "+573001234567", "https://logo.png", 2L);
         RestaurantResponseDto responseDto = new RestaurantResponseDto("Restaurante La 80", "https://logo.png");
+        CustomPage<Restaurant> customPage = new CustomPage<>(List.of(domainRestaurant), 0, 5, 1L, 1);
 
-        when(restaurantServicePort.getRestaurants(page, size)).thenReturn(List.of(domainRestaurant));
+        when(restaurantServicePort.getRestaurants(page, size)).thenReturn(customPage);
         when(restaurantDtoMapper.toResponseDtoList(List.of(domainRestaurant))).thenReturn(List.of(responseDto));
 
         // Act
-        List<RestaurantResponseDto> result = restaurantHandler.getRestaurants(page, size);
+        PaginationResponseDto<RestaurantResponseDto> result = restaurantHandler.getRestaurants(page, size);
 
         // Assert
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("Restaurante La 80", result.get(0).getName());
+        assertEquals(1, result.getContent().size());
+        assertEquals("Restaurante La 80", result.getContent().get(0).getName());
+        assertEquals(0, result.getCurrentPage());
+        assertEquals(5, result.getPageSize());
+        assertEquals(1L, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
         verify(restaurantServicePort).getRestaurants(page, size);
         verify(restaurantDtoMapper).toResponseDtoList(List.of(domainRestaurant));
     }

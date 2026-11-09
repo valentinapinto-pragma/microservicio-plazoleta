@@ -4,8 +4,10 @@ import com.pragma.plazoleta.application.dto.request.DishRequestDto;
 import com.pragma.plazoleta.application.dto.request.DishStatusRequestDto;
 import com.pragma.plazoleta.application.dto.request.UpdateDishRequestDto;
 import com.pragma.plazoleta.application.dto.response.DishResponseDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.mapper.DishDtoMapper;
 import com.pragma.plazoleta.domain.model.Category;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
 import org.junit.jupiter.api.DisplayName;
@@ -73,15 +75,20 @@ class DishHandlerTest {
     void shouldGetDishesByRestaurantSuccessfully() {
         Dish dish = new Dish(1L, "Hamburguesa", 15000, "Carne", "https://img.com/burger.png", new Category(1L, "Comida", null), 10L, true);
         DishResponseDto responseDto = new DishResponseDto(1L, "Hamburguesa", 15000, "Carne", "https://img.com/burger.png", "Comida");
+        CustomPage<Dish> customPage = new CustomPage<>(List.of(dish), 0, 10, 1L, 1);
 
-        when(dishServicePort.getDishesByRestaurant(10L, 1L, 0, 10)).thenReturn(List.of(dish));
+        when(dishServicePort.getDishesByRestaurant(10L, 1L, 0, 10)).thenReturn(customPage);
         when(dishDtoMapper.toResponseDtoList(List.of(dish))).thenReturn(List.of(responseDto));
 
-        List<DishResponseDto> result = dishHandler.getDishesByRestaurant(10L, 1L, 0, 10);
+        PaginationResponseDto<DishResponseDto> result = dishHandler.getDishesByRestaurant(10L, 1L, 0, 10);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("Hamburguesa", result.get(0).getName());
+        assertEquals(1, result.getContent().size());
+        assertEquals("Hamburguesa", result.getContent().get(0).getName());
+        assertEquals(0, result.getCurrentPage());
+        assertEquals(10, result.getPageSize());
+        assertEquals(1L, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
         verify(dishServicePort).getDishesByRestaurant(10L, 1L, 0, 10);
         verify(dishDtoMapper).toResponseDtoList(List.of(dish));
     }

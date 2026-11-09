@@ -16,30 +16,41 @@ import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.model.RestaurantEmployee;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.MessageNotificationPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 
 public class OrderUseCase implements OrderServicePort {
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final OrderPersistentPort orderPersistentPort;
     private final DishPersistentPort dishPersistentPort;
     private final RestaurantPersistentPort restaurantPersistentPort;
     private final RestaurantEmployeePersistentPort restaurantEmployeePersistentPort;
+    private final UserInformationPort userInformationPort;
+    private final MessageNotificationPort messageNotificationPort;
 
     public OrderUseCase(OrderPersistentPort orderPersistentPort,
                         DishPersistentPort dishPersistentPort,
                         RestaurantPersistentPort restaurantPersistentPort,
-                        RestaurantEmployeePersistentPort restaurantEmployeePersistentPort) {
+                        RestaurantEmployeePersistentPort restaurantEmployeePersistentPort,
+                        UserInformationPort userInformationPort,
+                        MessageNotificationPort messageNotificationPort) {
         this.orderPersistentPort = orderPersistentPort;
         this.dishPersistentPort = dishPersistentPort;
         this.restaurantPersistentPort = restaurantPersistentPort;
         this.restaurantEmployeePersistentPort = restaurantEmployeePersistentPort;
+        this.userInformationPort = userInformationPort;
+        this.messageNotificationPort = messageNotificationPort;
     }
 
     @Override
@@ -100,6 +111,51 @@ public class OrderUseCase implements OrderServicePort {
         Order savedOrder = orderPersistentPort.save(order);
         enrichOrdersWithDishDetails(List.of(savedOrder));
         return savedOrder;
+    }
+
+    @Override
+    public Order updateOrderToReady(Long orderId, Long employeeId) {
+        validateOrderIdNotNull(orderId);
+        validateEmployeeIdNotNull(employeeId);
+
+        RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"));
+
+        Order order = orderPersistentPort.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
+
+        validateOrderBelongsToRestaurant(order, employee.getRestaurantId());
+        validateOrderIsInPreparationStatus(order);
+
+        String securityPin = generateSecurityPin();
+        order.setStatus(OrderStatus.LISTO);
+        order.setSecurityPin(securityPin);
+
+        Order savedOrder = orderPersistentPort.save(order);
+
+        notifyClientOrderReady(savedOrder, securityPin);
+
+        enrichOrdersWithDishDetails(List.of(savedOrder));
+        return savedOrder;
+    }
+
+    private void notifyClientOrderReady(Order order, String securityPin) {
+        if (messageNotificationPort != null && userInformationPort != null) {
+            String clientPhone = userInformationPort.getClientPhoneNumber(order.getClientId());
+            String message = String.format("¡Hola! Tu pedido #%d está LISTO para ser reclamado. Tu PIN de seguridad es: %s", order.getId(), securityPin);
+            messageNotificationPort.sendMessage(clientPhone, message);
+        }
+    }
+
+    private String generateSecurityPin() {
+        int pinNumber = SECURE_RANDOM.nextInt(1_000_000);
+        return String.format("%06d", pinNumber);
+    }
+
+    private void validateOrderIsInPreparationStatus(Order order) {
+        if (order.getStatus() != OrderStatus.EN_PREPARACION) {
+            throw new InvalidOrderStatusException("Only orders in EN_PREPARACION status can be marked as ready");
+        }
     }
 
     private void validateOrderIdNotNull(Long orderId) {

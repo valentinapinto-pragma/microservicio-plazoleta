@@ -7,10 +7,7 @@ import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.model.RestaurantEmployee;
-import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
-import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
-import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
-import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,6 +41,12 @@ class OrderUseCaseTest {
 
     @Mock
     private RestaurantEmployeePersistentPort restaurantEmployeePersistentPort;
+
+    @Mock
+    private UserInformationPort userInformationPort;
+
+    @Mock
+    private MessageNotificationPort messageNotificationPort;
 
     @InjectMocks
     private OrderUseCase orderUseCase;
@@ -554,5 +557,124 @@ class OrderUseCaseTest {
         verify(orderPersistentPort, never()).save(any());
     }
 
+    // TESTS: HU-14 - updateOrderToReady
+
+    @Test
+    @DisplayName("Should successfully update order to ready, generate PIN, notify client, and enrich dishes")
+    void shouldUpdateOrderToReadySuccessfully() {
+        Long orderId = 100L;
+        Long employeeId = 3L;
+        Long restaurantId = 1L;
+        Long clientId = 10L;
+
+        RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
+        List<OrderDish> dishes = new ArrayList<>();
+        dishes.add(new OrderDish(1L, null, 100L, 2));
+
+        Order existingOrder = new Order(orderId, clientId, null, OrderStatus.EN_PREPARACION, employeeId, restaurantId, dishes);
+
+        when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(existingOrder));
+        when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userInformationPort.getClientPhoneNumber(clientId)).thenReturn("+573001234567");
+        when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(validDish1));
+
+        // Act
+        Order result = orderUseCase.updateOrderToReady(orderId, employeeId);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(OrderStatus.LISTO, result.getStatus());
+        assertNotNull(result.getSecurityPin());
+        assertTrue(result.getSecurityPin().matches("\\d{6}")); // Valida que sean 6 dígitos numéricos
+        verify(orderPersistentPort, times(1)).save(existingOrder);
+        verify(userInformationPort, times(1)).getClientPhoneNumber(clientId);
+        verify(messageNotificationPort, times(1)).sendMessage(eq("+573001234567"), contains(result.getSecurityPin()));
+        assertNotNull(result.getOrderDishes().get(0).getDish());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when orderId is null on updateOrderToReady")
+    void shouldThrowWhenOrderIdIsNullOnUpdateToReady() {
+        InvalidOrderDataException exception = assertThrows(
+                InvalidOrderDataException.class,
+                () -> orderUseCase.updateOrderToReady(null, 3L)
+        );
+        assertEquals("Order id cannot be null", exception.getMessage());
+        verify(orderPersistentPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when employeeId is null on updateOrderToReady")
+    void shouldThrowWhenEmployeeIdIsNullOnUpdateToReady() {
+        InvalidOrderDataException exception = assertThrows(
+                InvalidOrderDataException.class,
+                () -> orderUseCase.updateOrderToReady(100L, null)
+        );
+        assertEquals("Employee id cannot be null", exception.getMessage());
+        verify(orderPersistentPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when employee is not assigned to any restaurant on updateOrderToReady")
+    void shouldThrowWhenEmployeeNotAssignedToRestaurantOnUpdateToReady() {
+        when(restaurantEmployeePersistentPort.findByEmployeeId(3L)).thenReturn(Optional.empty());
+
+        EmployeeNotAssignedToRestaurantException exception = assertThrows(
+                EmployeeNotAssignedToRestaurantException.class,
+                () -> orderUseCase.updateOrderToReady(100L, 3L)
+        );
+        assertEquals("The employee is not assigned to any restaurant", exception.getMessage());
+        verify(orderPersistentPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when order is not found on updateOrderToReady")
+    void shouldThrowWhenOrderNotFoundOnUpdateToReady() {
+        RestaurantEmployee employee = new RestaurantEmployee(1L, 1L, 3L);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(3L)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(100L)).thenReturn(Optional.empty());
+
+        OrderNotFoundException exception = assertThrows(
+                OrderNotFoundException.class,
+                () -> orderUseCase.updateOrderToReady(100L, 3L)
+        );
+        assertEquals("Order not found with id: 100", exception.getMessage());
+        verify(orderPersistentPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when order does not belong to employee's restaurant on updateOrderToReady")
+    void shouldThrowWhenOrderDoesNotBelongToRestaurantOnUpdateToReady() {
+        RestaurantEmployee employee = new RestaurantEmployee(1L, 1L, 3L);
+        Order orderFromOtherRestaurant = new Order(100L, 10L, null, OrderStatus.EN_PREPARACION, 3L, 2L, List.of());
+
+        when(restaurantEmployeePersistentPort.findByEmployeeId(3L)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(100L)).thenReturn(Optional.of(orderFromOtherRestaurant));
+
+        OrderDoesNotBelongToRestaurantException exception = assertThrows(
+                OrderDoesNotBelongToRestaurantException.class,
+                () -> orderUseCase.updateOrderToReady(100L, 3L)
+        );
+        assertEquals("The order does not belong to the restaurant where the employee works", exception.getMessage());
+        verify(orderPersistentPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should throw exception when order is not in EN_PREPARACION status on updateOrderToReady")
+    void shouldThrowWhenStatusIsNotInPreparationOnUpdateToReady() {
+        RestaurantEmployee employee = new RestaurantEmployee(1L, 1L, 3L);
+        Order orderInPendingStatus = new Order(100L, 10L, null, OrderStatus.PENDIENTE, null, 1L, List.of());
+
+        when(restaurantEmployeePersistentPort.findByEmployeeId(3L)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(100L)).thenReturn(Optional.of(orderInPendingStatus));
+
+        InvalidOrderStatusException exception = assertThrows(
+                InvalidOrderStatusException.class,
+                () -> orderUseCase.updateOrderToReady(100L, 3L)
+        );
+        assertEquals("Only orders in EN_PREPARACION status can be marked as ready", exception.getMessage());
+        verify(orderPersistentPort, never()).save(any());
+    }
 
 }

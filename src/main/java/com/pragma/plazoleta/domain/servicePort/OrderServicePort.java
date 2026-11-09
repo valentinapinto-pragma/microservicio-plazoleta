@@ -9,4 +9,5 @@ public interface OrderServicePort {
     Order createOrder(Order order);
     List<Order> getOrdersByStatus(OrderStatus status, int page, int size, Long employeeId);
     Order assignOrder(Long orderId, OrderStatus status, Long employeeId);
+    Order updateOrderToReady(Long orderId, Long employeeId);
 }

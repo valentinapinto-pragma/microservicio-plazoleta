@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.persistence.adapter;
 
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.infrastructure.persistence.entity.DishEntity;
@@ -23,7 +24,7 @@ public class DishAdapterRepository implements DishPersistentPort {
     private final DishEntityMapper dishEntityMapper;
 
     @Override
-    public List<Dish> getDishesByRestaurant(Long idRestaurant, Long categoryId, int page, int size) {
+    public CustomPage<Dish> getDishesByRestaurant(Long idRestaurant, Long categoryId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<DishEntity> dishEntities;
 
@@ -33,10 +34,18 @@ public class DishAdapterRepository implements DishPersistentPort {
             dishEntities = dishRepository.findByIdRestaurantAndActiveTrue(idRestaurant, pageable);
         }
 
-        return dishEntities.getContent()
+        List<Dish> dishes = dishEntities.getContent()
                 .stream()
                 .map(dishEntityMapper::toDomain)
                 .collect(Collectors.toList());
+
+        return new CustomPage<>(
+                dishes,
+                dishEntities.getNumber(),
+                dishEntities.getSize(),
+                dishEntities.getTotalElements(),
+                dishEntities.getTotalPages()
+        );
     }
 
     @Override

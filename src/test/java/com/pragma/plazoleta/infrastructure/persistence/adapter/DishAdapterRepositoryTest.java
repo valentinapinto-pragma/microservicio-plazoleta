@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.persistence.adapter;
 
 import com.pragma.plazoleta.domain.model.Category;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.infrastructure.persistence.entity.CategoryEntity;
 import com.pragma.plazoleta.infrastructure.persistence.entity.DishEntity;
@@ -13,6 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -98,41 +103,44 @@ class DishAdapterRepositoryTest {
 
         verify(dishRepository).deleteById(1L);
     }
+
     @Test
     @DisplayName("Should return paged dishes filtered by category when categoryId is provided")
     void shouldReturnDishesFilteredByCategory() {
-        // Arrange
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 5);
-        org.springframework.data.domain.Page<DishEntity> page = new org.springframework.data.domain.PageImpl<>(List.of(entity));
+        Pageable pageable = PageRequest.of(0, 5);
+        Page<DishEntity> page = new PageImpl<>(List.of(entity));
 
         when(dishRepository.findByIdRestaurantAndCategoryIdAndActiveTrue(2L, 1L, pageable)).thenReturn(page);
         when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
 
-        // Act
-        List<Dish> result = dishAdapterRepository.getDishesByRestaurant(2L, 1L, 0, 5);
+        CustomPage<Dish> result = dishAdapterRepository.getDishesByRestaurant(2L, 1L, 0, 5);
 
-        // Assert
         assertNotNull(result);
-        assertEquals(1, result.size());
+        assertEquals(1, result.getContent().size());
+        assertEquals(dish.getName(), result.getContent().get(0).getName());
+        assertEquals(0, result.getCurrentPage());
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
         verify(dishRepository).findByIdRestaurantAndCategoryIdAndActiveTrue(2L, 1L, pageable);
     }
 
     @Test
     @DisplayName("Should return paged dishes without category filter when categoryId is null")
     void shouldReturnDishesWithoutCategoryFilterWhenCategoryIdIsNull() {
-        // Arrange
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 5);
-        org.springframework.data.domain.Page<DishEntity> page = new org.springframework.data.domain.PageImpl<>(List.of(entity));
+        Pageable pageable = PageRequest.of(0, 5);
+        Page<DishEntity> page = new PageImpl<>(List.of(entity));
 
         when(dishRepository.findByIdRestaurantAndActiveTrue(2L, pageable)).thenReturn(page);
         when(dishEntityMapper.toDomain(entity)).thenReturn(dish);
 
-        // Act
-        List<Dish> result = dishAdapterRepository.getDishesByRestaurant(2L, null, 0, 5);
+        CustomPage<Dish> result = dishAdapterRepository.getDishesByRestaurant(2L, null, 0, 5);
 
-        // Assert
         assertNotNull(result);
-        assertEquals(1, result.size());
+        assertEquals(1, result.getContent().size());
+        assertEquals(dish.getName(), result.getContent().get(0).getName());
+        assertEquals(0, result.getCurrentPage());
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
         verify(dishRepository).findByIdRestaurantAndActiveTrue(2L, pageable);
     }
 }

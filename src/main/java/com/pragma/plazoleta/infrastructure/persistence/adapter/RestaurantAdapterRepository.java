@@ -1,11 +1,13 @@
 package com.pragma.plazoleta.infrastructure.persistence.adapter;
 
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.infrastructure.persistence.entity.RestaurantEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.RestaurantEntityMapper;
 import com.pragma.plazoleta.infrastructure.persistence.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -29,12 +31,20 @@ public class RestaurantAdapterRepository implements RestaurantPersistentPort {
     }
 
     @Override
-    public List<Restaurant> getRestaurants(int page, int size) {
+    public CustomPage<Restaurant> getRestaurants(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        return restaurantRepository.findAll(pageable)
+        Page<RestaurantEntity> pageResult = restaurantRepository.findAll(pageable);
+        List<Restaurant> restaurants = pageResult.getContent()
                 .stream()
                 .map(restaurantEntityMapper::toDomain)
                 .collect(Collectors.toList());
+        return new CustomPage<>(
+                restaurants,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages()
+        );
     }
 
     @Override

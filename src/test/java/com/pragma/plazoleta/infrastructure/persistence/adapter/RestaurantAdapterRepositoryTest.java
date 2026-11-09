@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.persistence.adapter;
 
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.infrastructure.persistence.entity.RestaurantEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.RestaurantEntityMapper;
@@ -148,11 +149,14 @@ class RestaurantAdapterRepositoryTest {
         when(restaurantRepository.findAll(any(Pageable.class))).thenReturn(pageResult);
         when(restaurantEntityMapper.toDomain(entity)).thenReturn(restaurant);
 
-        List<Restaurant> result = restaurantAdapterRepository.getRestaurants(0, 5);
+        CustomPage<Restaurant> result = restaurantAdapterRepository.getRestaurants(0, 5);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(restaurant.getName(), result.get(0).getName());
+        assertEquals(1, result.getContent().size());
+        assertEquals(restaurant.getName(), result.getContent().get(0).getName());
+        assertEquals(0, result.getCurrentPage());
+        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
         verify(restaurantRepository).findAll(any(Pageable.class));
         verify(restaurantEntityMapper).toDomain(entity);
     }

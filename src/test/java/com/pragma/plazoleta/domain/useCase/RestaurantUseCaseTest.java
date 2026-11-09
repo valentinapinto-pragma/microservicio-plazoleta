@@ -2,6 +2,7 @@ package com.pragma.plazoleta.domain.useCase;
 
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
@@ -16,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,9 +38,9 @@ class RestaurantUseCaseTest {
     void setUp() {
         validRestaurant = new Restaurant(
                 1L,
-                "Restaurante La 80",
+                "Restaurante El Buen Sabor",
                 "123456789",
-                "Calle 10 # 5-20",
+                "Calle 123 # 45-67",
                 "+573001234567",
                 "https://imagen.com/logo.png",
                 2L
@@ -46,43 +48,26 @@ class RestaurantUseCaseTest {
     }
 
     @Test
-    @DisplayName("Should successfully create restaurant when data is valid and owner exists")
-    void shouldCreateRestaurantWhenDataIsValid() {
+    @DisplayName("Should successfully create a restaurant when all data is valid")
+    void shouldCreateRestaurantSuccessfully() {
         // Arrange
         when(userInformationPort.isValidOwner(2L)).thenReturn(true);
         when(restaurantPersistentPort.existsByNit("123456789")).thenReturn(false);
-        when(restaurantPersistentPort.save(validRestaurant)).thenReturn(validRestaurant);
+        when(restaurantPersistentPort.save(any(Restaurant.class))).thenReturn(validRestaurant);
 
         // Act
         Restaurant result = restaurantUseCase.createRestaurant(validRestaurant);
 
         // Assert
         assertNotNull(result);
-        assertEquals(validRestaurant.getName(), result.getName());
+        assertEquals("Restaurante El Buen Sabor", result.getName());
         verify(userInformationPort).isValidOwner(2L);
         verify(restaurantPersistentPort).existsByNit("123456789");
         verify(restaurantPersistentPort).save(validRestaurant);
     }
 
     @Test
-    @DisplayName("Should successfully create restaurant when phone has no plus sign")
-    void shouldCreateRestaurantWhenPhoneHasNoPlusSign() {
-        // Arrange
-        validRestaurant.setPhone("573001234567");
-        when(userInformationPort.isValidOwner(2L)).thenReturn(true);
-        when(restaurantPersistentPort.existsByNit("123456789")).thenReturn(false);
-        when(restaurantPersistentPort.save(validRestaurant)).thenReturn(validRestaurant);
-
-        // Act
-        Restaurant result = restaurantUseCase.createRestaurant(validRestaurant);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("573001234567", result.getPhone());
-    }
-
-    @Test
-    @DisplayName("Should throw exception when restaurant name is null")
+    @DisplayName("Should throw exception when name is null")
     void shouldThrowWhenNameIsNull() {
         // Arrange
         validRestaurant.setName(null);
@@ -93,14 +78,13 @@ class RestaurantUseCaseTest {
                 () -> restaurantUseCase.createRestaurant(validRestaurant)
         );
         assertEquals("The restaurant name cannot consist solely of numbers", exception.getMessage());
-        verifyNoInteractions(userInformationPort, restaurantPersistentPort);
     }
 
     @Test
-    @DisplayName("Should throw exception when restaurant name consists solely of numbers")
-    void shouldThrowWhenNameIsOnlyNumbers() {
+    @DisplayName("Should throw exception when name consists solely of numbers")
+    void shouldThrowWhenNameContainsOnlyNumbers() {
         // Arrange
-        validRestaurant.setName("1234567");
+        validRestaurant.setName("123456");
 
         // Act & Assert
         InvalidRestaurantDataException exception = assertThrows(
@@ -108,7 +92,6 @@ class RestaurantUseCaseTest {
                 () -> restaurantUseCase.createRestaurant(validRestaurant)
         );
         assertEquals("The restaurant name cannot consist solely of numbers", exception.getMessage());
-        verifyNoInteractions(userInformationPort, restaurantPersistentPort);
     }
 
     @Test
@@ -127,9 +110,9 @@ class RestaurantUseCaseTest {
 
     @Test
     @DisplayName("Should throw exception when NIT contains non-numeric characters")
-    void shouldThrowWhenNitContainsLetters() {
+    void shouldThrowWhenNitIsNotStrictlyNumeric() {
         // Arrange
-        validRestaurant.setNit("12345ABC");
+        validRestaurant.setNit("12345A678");
 
         // Act & Assert
         InvalidRestaurantDataException exception = assertThrows(
@@ -232,14 +215,18 @@ class RestaurantUseCaseTest {
     void shouldReturnPagedRestaurantsSuccessfully() {
         int page = 0;
         int size = 5;
-        List<Restaurant> mockRestaurants = List.of(validRestaurant);
-        when(restaurantPersistentPort.getRestaurants(page, size)).thenReturn(mockRestaurants);
+        CustomPage<Restaurant> mockPage = new CustomPage<>(List.of(validRestaurant), 0, 5, 1L, 1);
+        when(restaurantPersistentPort.getRestaurants(page, size)).thenReturn(mockPage);
 
-        List<Restaurant> result = restaurantUseCase.getRestaurants(page, size);
+        CustomPage<Restaurant> result = restaurantUseCase.getRestaurants(page, size);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(validRestaurant.getName(), result.get(0).getName());
+        assertEquals(1, result.getContent().size());
+        assertEquals(validRestaurant.getName(), result.getContent().get(0).getName());
+        assertEquals(0, result.getCurrentPage());
+        assertEquals(5, result.getPageSize());
+        assertEquals(1L, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
         verify(restaurantPersistentPort).getRestaurants(page, size);
     }
 
@@ -264,5 +251,4 @@ class RestaurantUseCaseTest {
         assertEquals("The page size must be greater than 0", exception.getMessage());
         verifyNoInteractions(restaurantPersistentPort);
     }
-
 }

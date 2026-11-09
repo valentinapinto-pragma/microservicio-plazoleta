@@ -2,6 +2,7 @@ package com.pragma.plazoleta.domain.useCase;
 
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
@@ -42,18 +43,14 @@ public class RestaurantUseCase implements RestaurantServicePort {
     }
 
     @Override
-    public List<Restaurant> getRestaurants(int page, int size) {
-        validatePagination(page, size);
-        return restaurantPersistentPort.getRestaurants(page, size);
-    }
-
-    private void validatePagination(int page, int size) {
+    public CustomPage<Restaurant> getRestaurants(int page, int size) {
         if (page < 0) {
             throw new InvalidRestaurantDataException(INVALID_PAGE_MESSAGE);
         }
         if (size <= 0) {
             throw new InvalidRestaurantDataException(INVALID_SIZE_MESSAGE);
         }
+        return restaurantPersistentPort.getRestaurants(page, size);
     }
 
     private void validateRestaurantData(Restaurant restaurant) {

@@ -4,6 +4,7 @@ import com.pragma.plazoleta.domain.exception.DishNotFoundException;
 import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
 import com.pragma.plazoleta.domain.exception.UserNotOwnerOfRestaurantException;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Restaurant;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
@@ -91,13 +92,11 @@ public class DishUseCase implements DishServicePort {
     }
 
     @Override
-    public List<Dish> getDishesByRestaurant(Long idRestaurant, Long categoryId, int page, int size) {
+    public CustomPage<Dish> getDishesByRestaurant(Long idRestaurant, Long categoryId, int page, int size) {
         if (idRestaurant == null || !restaurantPersistentPort.existsById(idRestaurant)) {
             throw new RestaurantNotFoundException(INVALID_RESTAURANT_MESSAGE);
         }
-
         validatePagination(page, size);
-
         return dishPersistentPort.getDishesByRestaurant(idRestaurant, categoryId, page, size);
     }
 

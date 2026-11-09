@@ -231,4 +231,70 @@ class UserInformationAdapterTest {
 
         assertNull(phone);
     }
+
+    // Pruebas de isValidEmployee (Feign Client)
+    @Test
+    @DisplayName("Should return true when user has employee role via roleId")
+    void shouldReturnTrueWhenUserHasEmployeeRoleId() {
+        UserResponseDto user = new UserResponseDto();
+        user.setId(5L);
+        user.setRoleId(3L);
+
+        when(userFeignClient.getUserById(5L)).thenReturn(user);
+
+        boolean result = userInformationAdapter.isValidEmployee(5L);
+
+        assertTrue(result);
+        verify(userFeignClient).getUserById(5L);
+    }
+
+    @Test
+    @DisplayName("Should return true when user has employee role via nested role object")
+    void shouldReturnTrueWhenUserHasEmployeeNestedRole() {
+        RoleResponseDto role = new RoleResponseDto(3L, "EMPLOYEE", "Rol empleado");
+        UserResponseDto user = new UserResponseDto();
+        user.setId(5L);
+        user.setRole(role);
+
+        when(userFeignClient.getUserById(5L)).thenReturn(user);
+
+        boolean result = userInformationAdapter.isValidEmployee(5L);
+
+        assertTrue(result);
+    }
+
+    @Test
+    @DisplayName("Should return false when user has different role for employee")
+    void shouldReturnFalseWhenUserHasDifferentRoleForEmployee() {
+        UserResponseDto user = new UserResponseDto();
+        user.setId(5L);
+        user.setRoleId(1L);
+
+        when(userFeignClient.getUserById(5L)).thenReturn(user);
+
+        boolean result = userInformationAdapter.isValidEmployee(5L);
+
+        assertFalse(result);
+    }
+
+    @Test
+    @DisplayName("Should return false when employee user is null")
+    void shouldReturnFalseWhenEmployeeUserIsNull() {
+        when(userFeignClient.getUserById(5L)).thenReturn(null);
+
+        boolean result = userInformationAdapter.isValidEmployee(5L);
+
+        assertFalse(result);
+    }
+
+    @Test
+    @DisplayName("Should return false when feign throws not found for employee")
+    void shouldReturnFalseWhenFeignThrowsNotFoundForEmployee() {
+        Request request = Request.create(Request.HttpMethod.GET, "/users/5", Collections.emptyMap(), null, new RequestTemplate());
+        when(userFeignClient.getUserById(5L)).thenThrow(new FeignException.NotFound("Not found", request, null, null));
+
+        boolean result = userInformationAdapter.isValidEmployee(5L);
+
+        assertFalse(result);
+    }
 }

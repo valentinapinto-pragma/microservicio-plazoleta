@@ -215,4 +215,25 @@ class ControllerAdvisorTest {
         assertEquals("Only orders in PENDIENTE status can be assigned to a chef", response.getBody().getMessage());
     }
 
+    @Test
+    @DisplayName("Should handle EmployeeAlreadyAssignedException")
+    void shouldHandleEmployeeAlreadyAssignedException() {
+        EmployeeAlreadyAssignedException ex = new EmployeeAlreadyAssignedException("Employee already assigned");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleEmployeeAlreadyAssignedException(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Employee already assigned", response.getBody().getMessage());
+    }
+
+    @Test
+    @DisplayName("Should handle InvalidEmployeeException")
+    void shouldHandleInvalidEmployeeException() {
+        InvalidEmployeeException ex = new InvalidEmployeeException("Invalid employee");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleInvalidEmployeeException(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Invalid employee", response.getBody().getMessage());
+    }
 }

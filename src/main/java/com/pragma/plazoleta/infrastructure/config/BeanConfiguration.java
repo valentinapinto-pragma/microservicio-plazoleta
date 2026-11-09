@@ -12,9 +12,11 @@ import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.domain.servicePort.DishServicePort;
 import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
+import com.pragma.plazoleta.domain.servicePort.RestaurantEmployeeServicePort;
 import com.pragma.plazoleta.domain.servicePort.RestaurantServicePort;
 import com.pragma.plazoleta.domain.useCase.DishUseCase;
 import com.pragma.plazoleta.domain.useCase.OrderUseCase;
+import com.pragma.plazoleta.domain.useCase.RestaurantEmployeeUseCase;
 import com.pragma.plazoleta.domain.useCase.RestaurantUseCase;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -35,6 +37,14 @@ public class BeanConfiguration {
     public RestaurantServicePort restaurantServicePort(RestaurantPersistentPort restaurantPersistentPort,
                                                        UserInformationPort userInformationPort) {
         return new RestaurantUseCase(restaurantPersistentPort, userInformationPort);
+    }
+
+    @Bean
+    public RestaurantEmployeeServicePort restaurantEmployeeServicePort(
+            RestaurantPersistentPort restaurantPersistentPort,
+            RestaurantEmployeePersistentPort restaurantEmployeePersistentPort,
+            UserInformationPort userInformationPort) {
+        return new RestaurantEmployeeUseCase(restaurantPersistentPort, restaurantEmployeePersistentPort, userInformationPort);
     }
 
     @Bean

@@ -1,19 +1,6 @@
 package com.pragma.plazoleta.infrastructure.exceptionhandler;
 
-import com.pragma.plazoleta.domain.exception.ClientHasActiveOrderException;
-import com.pragma.plazoleta.domain.exception.DishDoesNotBelongToRestaurantException;
-import com.pragma.plazoleta.domain.exception.DishInactiveException;
-import com.pragma.plazoleta.domain.exception.DishNotFoundException;
-import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
-import com.pragma.plazoleta.domain.exception.InvalidDishDataException;
-import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
-import com.pragma.plazoleta.domain.exception.InvalidOrderStatusException;
-import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
-import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToRestaurantException;
-import com.pragma.plazoleta.domain.exception.OrderNotFoundException;
-import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
-import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
-import com.pragma.plazoleta.domain.exception.UserNotOwnerOfRestaurantException;
+import com.pragma.plazoleta.domain.exception.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -124,5 +111,17 @@ public class ControllerAdvisor {
     public ResponseEntity<ErrorResponseDto> handleAccessDeniedException(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponseDto("Access denied: You do not have permissions to perform this action"));
+    }
+
+    @ExceptionHandler(EmployeeAlreadyAssignedException.class)
+    public ResponseEntity<ErrorResponseDto> handleEmployeeAlreadyAssignedException(EmployeeAlreadyAssignedException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidEmployeeException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvalidEmployeeException(InvalidEmployeeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
     }
 }

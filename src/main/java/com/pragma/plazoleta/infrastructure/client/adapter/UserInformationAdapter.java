@@ -65,6 +65,16 @@ public class UserInformationAdapter implements UserInformationPort {
         }
     }
 
+    @Override
+    public boolean isValidEmployee(Long employeeId) {
+        try {
+            UserResponseDto user = userFeignClient.getUserById(employeeId);
+            return isEmployeeRole(user);
+        } catch (FeignException.NotFound e) {
+            return false;
+        }
+    }
+
     private boolean isOwnerRole(UserResponseDto user) {
         if (user == null) {
             return false;
@@ -73,5 +83,15 @@ public class UserInformationAdapter implements UserInformationPort {
             return RoleEnum.OWNER.getId().equals(user.getRoleId());
         }
         return user.getRole() != null && RoleEnum.OWNER.getId().equals(user.getRole().getId());
+    }
+
+    private boolean isEmployeeRole(UserResponseDto user) {
+        if (user == null) {
+            return false;
+        }
+        if (user.getRoleId() != null) {
+            return RoleEnum.EMPLOYEE.getId().equals(user.getRoleId());
+        }
+        return user.getRole() != null && RoleEnum.EMPLOYEE.getId().equals(user.getRole().getId());
     }
 }

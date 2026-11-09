@@ -1,12 +1,15 @@
 package com.pragma.plazoleta.infrastructure.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pragma.plazoleta.application.dto.request.RestaurantEmployeeRequestDto;
 import com.pragma.plazoleta.application.dto.request.RestaurantRequestDto;
 import com.pragma.plazoleta.application.dto.response.RestaurantResponseDto;
+import com.pragma.plazoleta.application.handler.RestaurantEmployeeHandler;
 import com.pragma.plazoleta.application.handler.RestaurantHandler;
 import com.pragma.plazoleta.domain.exception.InvalidRestaurantDataException;
 import com.pragma.plazoleta.domain.exception.OwnerNotValidException;
 import com.pragma.plazoleta.infrastructure.exceptionhandler.ControllerAdvisor;
+import com.pragma.plazoleta.infrastructure.security.JwtAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +37,12 @@ class RestaurantControllerTest {
 
     @Mock
     private RestaurantHandler restaurantHandler;
+
+    @Mock
+    private RestaurantEmployeeHandler restaurantEmployeeHandler;
+
+    @Mock
+    private JwtAdapter jwtAdapter;
 
     @InjectMocks
     private RestaurantController restaurantController;
@@ -154,5 +163,41 @@ class RestaurantControllerTest {
                 .andExpect(status().isOk());
 
         verify(restaurantHandler).getRestaurants(0, 10);
+    }
+    @Test
+    @DisplayName("Should return 201 Created when employee is assigned successfully")
+    void shouldReturn201WhenAssignEmployeeSuccessfully() throws Exception {
+        Long restaurantId = 1L;
+        Long employeeId = 5L;
+        Long ownerId = 10L;
+        String authHeader = "Bearer valid.owner.token";
+        RestaurantEmployeeRequestDto requestDto = new RestaurantEmployeeRequestDto(employeeId);
+
+        when(jwtAdapter.extractUserId(authHeader)).thenReturn(ownerId);
+        doNothing().when(restaurantEmployeeHandler).assignEmployeeToRestaurant(eq(restaurantId), any(RestaurantEmployeeRequestDto.class), eq(ownerId));
+
+        mockMvc.perform(post("/restaurants/{restaurantId}/employees", restaurantId)
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isCreated());
+
+        verify(restaurantEmployeeHandler, times(1)).assignEmployeeToRestaurant(eq(restaurantId), any(RestaurantEmployeeRequestDto.class), eq(ownerId));
+    }
+
+    @Test
+    @DisplayName("Should return 400 Bad Request when request body has null employeeId")
+    void shouldReturn400WhenEmployeeIdIsNull() throws Exception {
+        Long restaurantId = 1L;
+        String authHeader = "Bearer valid.owner.token";
+        RestaurantEmployeeRequestDto requestDto = new RestaurantEmployeeRequestDto(null);
+
+        mockMvc.perform(post("/restaurants/{restaurantId}/employees", restaurantId)
+                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest());
+
+        verify(restaurantEmployeeHandler, never()).assignEmployeeToRestaurant(any(), any(), any());
     }
 }

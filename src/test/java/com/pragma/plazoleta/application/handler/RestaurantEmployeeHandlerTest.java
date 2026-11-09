@@ -26,12 +26,11 @@ class RestaurantEmployeeHandlerTest {
     void shouldDelegateToDomainServicePort() {
         Long restaurantId = 1L;
         Long employeeId = 5L;
-        Long ownerId = 10L;
         RestaurantEmployeeRequestDto requestDto = new RestaurantEmployeeRequestDto(employeeId);
 
-        restaurantEmployeeHandler.assignEmployeeToRestaurant(restaurantId, requestDto, ownerId);
+        restaurantEmployeeHandler.assignEmployeeToRestaurant(restaurantId, requestDto);
 
         verify(restaurantEmployeeServicePort, times(1))
-                .assignEmployeeToRestaurant(restaurantId, employeeId, ownerId);
+                .assignEmployeeToRestaurant(restaurantId, employeeId);
     }
 }

@@ -19,25 +19,24 @@ public class OrderHandler {
     private final OrderServicePort orderServicePort;
     private final OrderDtoMapper orderDtoMapper;
 
-    public void createOrder(OrderRequestDto orderRequestDto, Long clientId) {
+    public void createOrder(OrderRequestDto orderRequestDto) {
         Order order = orderDtoMapper.toDomain(orderRequestDto);
-        order.setClientId(clientId);
         orderServicePort.createOrder(order);
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponseDto> getOrdersByStatus(OrderStatus status, int page, int size, Long employeeId) {
-        List<Order> orders = orderServicePort.getOrdersByStatus(status, page, size, employeeId);
+    public List<OrderResponseDto> getOrdersByStatus(OrderStatus status, int page, int size) {
+        List<Order> orders = orderServicePort.getOrdersByStatus(status, page, size);
         return orderDtoMapper.toResponseDtoList(orders);
     }
 
-    public OrderResponseDto assignOrder(Long orderId, OrderStatusRequestDto requestDto, Long employeeId) {
-        Order updatedOrder = orderServicePort.assignOrder(orderId, requestDto.getStatus(), employeeId);
+    public OrderResponseDto assignOrder(Long id, OrderStatusRequestDto orderStatusRequestDto) {
+        Order updatedOrder = orderServicePort.assignOrder(id, orderStatusRequestDto.getStatus());
         return orderDtoMapper.toResponseDto(updatedOrder);
     }
 
-    public OrderResponseDto updateOrderToReady(Long orderId, Long employeeId) {
-        Order updatedOrder = orderServicePort.updateOrderToReady(orderId, employeeId);
+    public OrderResponseDto updateOrderToReady(Long id) {
+        Order updatedOrder = orderServicePort.updateOrderToReady(id);
         return orderDtoMapper.toResponseDto(updatedOrder);
     }
 }

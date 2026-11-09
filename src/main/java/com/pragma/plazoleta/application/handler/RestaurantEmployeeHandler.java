@@ -13,11 +13,10 @@ public class RestaurantEmployeeHandler {
 
     private final RestaurantEmployeeServicePort restaurantEmployeeServicePort;
 
-    public void assignEmployeeToRestaurant(Long restaurantId, RestaurantEmployeeRequestDto requestDto, Long authenticatedOwnerId) {
+    public void assignEmployeeToRestaurant(Long restaurantId, RestaurantEmployeeRequestDto requestDto) {
         restaurantEmployeeServicePort.assignEmployeeToRestaurant(
                 restaurantId,
-                requestDto.getEmployeeId(),
-                authenticatedOwnerId
+                requestDto.getEmployeeId()
         );
     }
 }

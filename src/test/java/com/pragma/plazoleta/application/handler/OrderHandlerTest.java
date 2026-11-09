@@ -35,7 +35,7 @@ class OrderHandlerTest {
     private OrderHandler orderHandler;
 
     @Test
-    @DisplayName("Should successfully map DTO, set client ID and call order service port")
+    @DisplayName("Should successfully map DTO and call order service port")
     void shouldCreateOrderSuccessfully() {
         // Arrange
         OrderDishRequestDto dishDto = new OrderDishRequestDto(100L, 2);
@@ -46,10 +46,9 @@ class OrderHandlerTest {
         when(orderDtoMapper.toDomain(requestDto)).thenReturn(domainOrder);
 
         // Act
-        orderHandler.createOrder(requestDto, 10L);
+        orderHandler.createOrder(requestDto);
 
         // Assert
-        assertEquals(10L, domainOrder.getClientId());
         verify(orderDtoMapper, times(1)).toDomain(requestDto);
         verify(orderServicePort, times(1)).createOrder(domainOrder);
     }
@@ -61,22 +60,21 @@ class OrderHandlerTest {
         OrderStatus status = OrderStatus.PENDIENTE;
         int page = 0;
         int size = 10;
-        Long employeeId = 50L;
 
         Order order = new Order(1L, 10L, null, status, null, 2L, List.of());
         OrderResponseDto responseDto = new OrderResponseDto(1L, 10L, null, status, null, 2L, List.of());
 
-        when(orderServicePort.getOrdersByStatus(status, page, size, employeeId)).thenReturn(List.of(order));
+        when(orderServicePort.getOrdersByStatus(status, page, size)).thenReturn(List.of(order));
         when(orderDtoMapper.toResponseDtoList(List.of(order))).thenReturn(List.of(responseDto));
 
         // Act
-        List<OrderResponseDto> result = orderHandler.getOrdersByStatus(status, page, size, employeeId);
+        List<OrderResponseDto> result = orderHandler.getOrdersByStatus(status, page, size);
 
         // Assert
         assertNotNull(result);
         assertEquals(1, result.size());
         assertEquals(1L, result.get(0).getId());
-        verify(orderServicePort, times(1)).getOrdersByStatus(status, page, size, employeeId);
+        verify(orderServicePort, times(1)).getOrdersByStatus(status, page, size);
         verify(orderDtoMapper, times(1)).toResponseDtoList(List.of(order));
     }
 
@@ -85,47 +83,46 @@ class OrderHandlerTest {
     void shouldAssignOrderSuccessfully() {
         // Arrange
         Long orderId = 100L;
-        Long employeeId = 3L;
         OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
 
-        Order updatedOrder = new Order(orderId, 10L, null, OrderStatus.EN_PREPARACION, employeeId, 1L, List.of());
-        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.EN_PREPARACION, employeeId, 1L, List.of());
+        Order updatedOrder = new Order(orderId, 10L, null, OrderStatus.EN_PREPARACION, 3L, 1L, List.of());
+        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.EN_PREPARACION, 3L, 1L, List.of());
 
-        when(orderServicePort.assignOrder(orderId, OrderStatus.EN_PREPARACION, employeeId)).thenReturn(updatedOrder);
+        when(orderServicePort.assignOrder(orderId, OrderStatus.EN_PREPARACION)).thenReturn(updatedOrder);
         when(orderDtoMapper.toResponseDto(updatedOrder)).thenReturn(responseDto);
 
         // Act
-        OrderResponseDto result = orderHandler.assignOrder(orderId, requestDto, employeeId);
+        OrderResponseDto result = orderHandler.assignOrder(orderId, requestDto);
 
         // Assert
         assertNotNull(result);
         assertEquals(orderId, result.getId());
         assertEquals(OrderStatus.EN_PREPARACION, result.getStatus());
-        assertEquals(employeeId, result.getIdChef());
-        verify(orderServicePort, times(1)).assignOrder(orderId, OrderStatus.EN_PREPARACION, employeeId);
+        assertEquals(3L, result.getIdChef());
+        verify(orderServicePort, times(1)).assignOrder(orderId, OrderStatus.EN_PREPARACION);
         verify(orderDtoMapper, times(1)).toResponseDto(updatedOrder);
     }
+
     @Test
     @DisplayName("Should update order to ready through service port and map to response DTO")
     void shouldUpdateOrderToReadySuccessfully() {
         Long orderId = 100L;
-        Long employeeId = 3L;
 
-        Order readyOrder = new Order(orderId, 10L, null, OrderStatus.LISTO, employeeId, 1L, List.of(), "123456");
-        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.LISTO, employeeId, 1L, List.of(), "123456");
+        Order readyOrder = new Order(orderId, 10L, null, OrderStatus.LISTO, 3L, 1L, List.of(), "123456");
+        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.LISTO, 3L, 1L, List.of(), "123456");
 
-        when(orderServicePort.updateOrderToReady(orderId, employeeId)).thenReturn(readyOrder);
+        when(orderServicePort.updateOrderToReady(orderId)).thenReturn(readyOrder);
         when(orderDtoMapper.toResponseDto(readyOrder)).thenReturn(responseDto);
 
         // Act
-        OrderResponseDto result = orderHandler.updateOrderToReady(orderId, employeeId);
+        OrderResponseDto result = orderHandler.updateOrderToReady(orderId);
 
         // Assert
         assertNotNull(result);
         assertEquals(orderId, result.getId());
         assertEquals(OrderStatus.LISTO, result.getStatus());
         assertEquals("123456", result.getSecurityPin());
-        verify(orderServicePort, times(1)).updateOrderToReady(orderId, employeeId);
+        verify(orderServicePort, times(1)).updateOrderToReady(orderId);
         verify(orderDtoMapper, times(1)).toResponseDto(readyOrder);
     }
 }

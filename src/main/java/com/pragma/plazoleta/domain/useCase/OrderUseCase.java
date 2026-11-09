@@ -26,7 +26,9 @@ import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class OrderUseCase implements OrderServicePort {
 
@@ -55,6 +57,9 @@ public class OrderUseCase implements OrderServicePort {
 
     @Override
     public Order createOrder(Order order) {
+        Long authenticatedClientId = userInformationPort.getAuthenticatedUserId();
+        order.setClientId(authenticatedClientId);
+
         validateOrderHasDishes(order);
         validateClientId(order.getClientId());
         validateNoDuplicateDishes(order.getOrderDishes());
@@ -70,9 +75,11 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     @Override
-    public List<Order> getOrdersByStatus(OrderStatus status, int page, int size, Long employeeId) {
+    public List<Order> getOrdersByStatus(OrderStatus status, int page, int size) {
         validateStatusNotNull(status);
         validatePagination(page, size);
+
+        Long employeeId = userInformationPort.getAuthenticatedUserId();
         validateEmployeeIdNotNull(employeeId);
 
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
@@ -90,11 +97,13 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     @Override
-    public Order assignOrder(Long orderId, OrderStatus status, Long employeeId) {
+    public Order assignOrder(Long orderId, OrderStatus status) {
         validateOrderIdNotNull(orderId);
         validateStatusNotNull(status);
-        validateEmployeeIdNotNull(employeeId);
         validateStatusIsInPreparation(status);
+
+        Long employeeId = userInformationPort.getAuthenticatedUserId();
+        validateEmployeeIdNotNull(employeeId);
 
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"));
@@ -114,8 +123,10 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     @Override
-    public Order updateOrderToReady(Long orderId, Long employeeId) {
+    public Order updateOrderToReady(Long orderId) {
         validateOrderIdNotNull(orderId);
+
+        Long employeeId = userInformationPort.getAuthenticatedUserId();
         validateEmployeeIdNotNull(employeeId);
 
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
@@ -158,15 +169,9 @@ public class OrderUseCase implements OrderServicePort {
         }
     }
 
-    private void validateOrderIdNotNull(Long orderId) {
-        if (orderId == null) {
-            throw new InvalidOrderDataException("Order id cannot be null");
-        }
-    }
-
     private void validateStatusIsInPreparation(OrderStatus status) {
         if (status != OrderStatus.EN_PREPARACION) {
-            throw new InvalidOrderStatusException("The requested status transition is invalid; only EN_PREPARACION is allowed for order assignment");
+            throw new InvalidOrderStatusException("Status transition is invalid; only EN_PREPARACION is allowed for order assignment");
         }
     }
 
@@ -194,6 +199,12 @@ public class OrderUseCase implements OrderServicePort {
         }
         if (size <= 0) {
             throw new InvalidOrderDataException("The page size must be greater than 0");
+        }
+    }
+
+    private void validateOrderIdNotNull(Long orderId) {
+        if (orderId == null) {
+            throw new InvalidOrderDataException("Order id cannot be null");
         }
     }
 
@@ -227,12 +238,12 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     private void validateNoDuplicateDishes(List<OrderDish> orderDishes) {
-        long uniqueDishes = orderDishes.stream()
-                .map(OrderDish::getDishId)
-                .distinct()
-                .count();
-        if (uniqueDishes < orderDishes.size()) {
-            throw new InvalidOrderDataException("The order cannot contain duplicate dishes; please specify the total quantity");
+        Set<Long> seenDishIds = new HashSet<>();
+        for (OrderDish orderDish : orderDishes) {
+            boolean wasAdded = seenDishIds.add(orderDish.getDishId());
+            if (!wasAdded) {
+                throw new InvalidOrderDataException("The order cannot contain duplicate dishes; please specify the total quantity");
+            }
         }
     }
 

@@ -23,10 +23,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RestaurantEmployeeUseCaseTest {
@@ -54,6 +51,8 @@ class RestaurantEmployeeUseCaseTest {
         employeeId = 5L;
         ownerId = 10L;
         restaurant = new Restaurant(restaurantId, "El Corral", "123456789", "Calle 10", "+573001234567", "http://logo.com", ownerId);
+
+        lenient().when(userInformationPort.getAuthenticatedUserId()).thenReturn(ownerId);
     }
 
     @Test
@@ -63,7 +62,7 @@ class RestaurantEmployeeUseCaseTest {
         when(userInformationPort.isValidEmployee(employeeId)).thenReturn(true);
         when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.empty());
 
-        restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId, ownerId);
+        restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId);
 
         verify(restaurantPersistentPort, times(1)).findById(restaurantId);
         verify(userInformationPort, times(1)).isValidEmployee(employeeId);
@@ -75,13 +74,10 @@ class RestaurantEmployeeUseCaseTest {
     @DisplayName("Should throw exception when any ID is null")
     void shouldThrowWhenAnyIdIsNull() {
         assertThrows(InvalidRestaurantDataException.class,
-                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(null, employeeId, ownerId));
+                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(null, employeeId));
 
         assertThrows(InvalidRestaurantDataException.class,
-                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, null, ownerId));
-
-        assertThrows(InvalidRestaurantDataException.class,
-                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId, null));
+                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, null));
 
         verify(restaurantEmployeePersistentPort, never()).save(any());
     }
@@ -93,7 +89,7 @@ class RestaurantEmployeeUseCaseTest {
 
         RestaurantNotFoundException exception = assertThrows(
                 RestaurantNotFoundException.class,
-                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId, ownerId)
+                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId)
         );
 
         assertEquals("Restaurant not found with id: " + restaurantId, exception.getMessage());
@@ -104,11 +100,12 @@ class RestaurantEmployeeUseCaseTest {
     @DisplayName("Should throw exception when user is not the owner of the restaurant")
     void shouldThrowWhenUserIsNotOwnerOfRestaurant() {
         Long differentOwnerId = 99L;
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(differentOwnerId);
         when(restaurantPersistentPort.findById(restaurantId)).thenReturn(Optional.of(restaurant));
 
         UserNotOwnerOfRestaurantException exception = assertThrows(
                 UserNotOwnerOfRestaurantException.class,
-                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId, differentOwnerId)
+                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId)
         );
 
         assertEquals("The user is not the owner of the restaurant", exception.getMessage());
@@ -123,7 +120,7 @@ class RestaurantEmployeeUseCaseTest {
 
         InvalidEmployeeException exception = assertThrows(
                 InvalidEmployeeException.class,
-                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId, ownerId)
+                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId)
         );
 
         assertEquals("The user is not a valid employee", exception.getMessage());
@@ -140,7 +137,7 @@ class RestaurantEmployeeUseCaseTest {
 
         EmployeeAlreadyAssignedException exception = assertThrows(
                 EmployeeAlreadyAssignedException.class,
-                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId, ownerId)
+                () -> restaurantEmployeeUseCase.assignEmployeeToRestaurant(restaurantId, employeeId)
         );
 
         assertEquals("The employee is already assigned to a restaurant", exception.getMessage());

@@ -27,8 +27,9 @@ public class RestaurantEmployeeUseCase implements RestaurantEmployeeServicePort 
     }
 
     @Override
-    public void assignEmployeeToRestaurant(Long restaurantId, Long employeeId, Long authenticatedOwnerId) {
-        validateInputs(restaurantId, employeeId, authenticatedOwnerId);
+    public void assignEmployeeToRestaurant(Long restaurantId, Long employeeId) {
+        validateInputs(restaurantId, employeeId);
+        Long authenticatedOwnerId = userInformationPort.getAuthenticatedUserId();
         validateRestaurantOwnership(restaurantId, authenticatedOwnerId);
         validateEmployeeRole(employeeId);
         validateEmployeeNotAlreadyAssigned(employeeId);
@@ -37,9 +38,9 @@ public class RestaurantEmployeeUseCase implements RestaurantEmployeeServicePort 
         restaurantEmployeePersistentPort.save(restaurantEmployee);
     }
 
-    private void validateInputs(Long restaurantId, Long employeeId, Long authenticatedOwnerId) {
-        if (restaurantId == null || employeeId == null || authenticatedOwnerId == null) {
-            throw new InvalidRestaurantDataException("Restaurant id, employee id, and owner id must not be null");
+    private void validateInputs(Long restaurantId, Long employeeId) {
+        if (restaurantId == null || employeeId == null) {
+            throw new InvalidRestaurantDataException("Restaurant id and employee id must not be null");
         }
     }
 

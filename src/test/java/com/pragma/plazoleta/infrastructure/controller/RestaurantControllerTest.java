@@ -169,35 +169,29 @@ class RestaurantControllerTest {
     void shouldReturn201WhenAssignEmployeeSuccessfully() throws Exception {
         Long restaurantId = 1L;
         Long employeeId = 5L;
-        Long ownerId = 10L;
-        String authHeader = "Bearer valid.owner.token";
         RestaurantEmployeeRequestDto requestDto = new RestaurantEmployeeRequestDto(employeeId);
 
-        when(jwtAdapter.extractUserId(authHeader)).thenReturn(ownerId);
-        doNothing().when(restaurantEmployeeHandler).assignEmployeeToRestaurant(eq(restaurantId), any(RestaurantEmployeeRequestDto.class), eq(ownerId));
+        doNothing().when(restaurantEmployeeHandler).assignEmployeeToRestaurant(eq(restaurantId), any(RestaurantEmployeeRequestDto.class));
 
         mockMvc.perform(post("/restaurants/{restaurantId}/employees", restaurantId)
-                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated());
 
-        verify(restaurantEmployeeHandler, times(1)).assignEmployeeToRestaurant(eq(restaurantId), any(RestaurantEmployeeRequestDto.class), eq(ownerId));
+        verify(restaurantEmployeeHandler, times(1)).assignEmployeeToRestaurant(eq(restaurantId), any(RestaurantEmployeeRequestDto.class));
     }
 
     @Test
     @DisplayName("Should return 400 Bad Request when request body has null employeeId")
     void shouldReturn400WhenEmployeeIdIsNull() throws Exception {
         Long restaurantId = 1L;
-        String authHeader = "Bearer valid.owner.token";
         RestaurantEmployeeRequestDto requestDto = new RestaurantEmployeeRequestDto(null);
 
         mockMvc.perform(post("/restaurants/{restaurantId}/employees", restaurantId)
-                        .header(org.springframework.http.HttpHeaders.AUTHORIZATION, authHeader)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest());
 
-        verify(restaurantEmployeeHandler, never()).assignEmployeeToRestaurant(any(), any(), any());
+        verify(restaurantEmployeeHandler, never()).assignEmployeeToRestaurant(any(), any());
     }
 }

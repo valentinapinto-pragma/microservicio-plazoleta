@@ -362,9 +362,8 @@ class OrderControllerTest {
     @DisplayName("Should return 200 OK when employee updates order to ready via PATCH /orders/{id}/ready")
     void shouldReturnOkWhenUpdateOrderToReady() throws Exception {
         Long orderId = 1L;
-
         OrderResponseDto responseDto = new OrderResponseDto(
-                orderId, 10L, LocalDateTime.now(), OrderStatus.LISTO, 5L, 1L, List.of(), "123456"
+                orderId, 10L, LocalDateTime.now(), OrderStatus.LISTO, 5L, 1L, List.of()
         );
 
         when(orderHandler.updateOrderToReady(orderId)).thenReturn(responseDto);
@@ -373,8 +372,7 @@ class OrderControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(orderId))
-                .andExpect(jsonPath("$.status").value("LISTO"))
-                .andExpect(jsonPath("$.securityPin").value("123456"));
+                .andExpect(jsonPath("$.status").value("LISTO"));
 
         verify(orderHandler, times(1)).updateOrderToReady(orderId);
     }

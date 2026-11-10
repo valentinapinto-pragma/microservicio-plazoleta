@@ -72,7 +72,7 @@ public class OrderController {
     })
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('EMPLOYEE')")
-    public ResponseEntity<OrderResponseDto> updateOrderStatus(
+    public ResponseEntity<OrderResponseDto> assignOrder(
             @PathVariable Long id,
             @Valid @RequestBody OrderStatusRequestDto orderStatusRequestDto) {
         OrderResponseDto updatedOrder = orderHandler.assignOrder(id, orderStatusRequestDto);

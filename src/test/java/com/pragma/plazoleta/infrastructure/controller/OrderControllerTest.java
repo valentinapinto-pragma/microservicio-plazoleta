@@ -6,6 +6,7 @@ import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderDishResponseDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.handler.OrderHandler;
 import com.pragma.plazoleta.domain.exception.*;
 import com.pragma.plazoleta.domain.model.OrderStatus;
@@ -198,9 +199,12 @@ class OrderControllerTest {
         OrderResponseDto responseDto = new OrderResponseDto(
                 1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, List.of(dishDto)
         );
+        PaginationResponseDto<OrderResponseDto> paginationResponse = new PaginationResponseDto<>(
+                List.of(responseDto), 0, 10, 1L, 1
+        );
 
         when(orderHandler.getOrdersByStatus(eq(OrderStatus.PENDIENTE), eq(0), eq(10)))
-                .thenReturn(List.of(responseDto));
+                .thenReturn(paginationResponse);
 
         mockMvc.perform(get("/orders")
                         .param("status", "PENDIENTE")
@@ -208,9 +212,13 @@ class OrderControllerTest {
                         .param("size", "10")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1L))
-                .andExpect(jsonPath("$[0].status").value("PENDIENTE"))
-                .andExpect(jsonPath("$[0].dishes[0].name").value("Hamburguesa"));
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].status").value("PENDIENTE"))
+                .andExpect(jsonPath("$.content[0].dishes[0].name").value("Hamburguesa"))
+                .andExpect(jsonPath("$.currentPage").value(0))
+                .andExpect(jsonPath("$.pageSize").value(10))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1));
 
         verify(orderHandler, times(1)).getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
     }

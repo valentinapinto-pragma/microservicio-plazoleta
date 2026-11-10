@@ -3,6 +3,7 @@ package com.pragma.plazoleta.infrastructure.controller;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.handler.OrderHandler;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.util.List;
 
 @RestController
 @RequestMapping("/orders")
@@ -54,11 +54,11 @@ public class OrderController {
     })
     @GetMapping
     @PreAuthorize("hasRole('EMPLOYEE')")
-    public ResponseEntity<List<OrderResponseDto>> getOrdersByStatus(
+    public ResponseEntity<PaginationResponseDto<OrderResponseDto>> getOrdersByStatus(
             @RequestParam OrderStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        List<OrderResponseDto> orders = orderHandler.getOrdersByStatus(status, page, size);
+        PaginationResponseDto<OrderResponseDto> orders = orderHandler.getOrdersByStatus(status, page, size);
         return ResponseEntity.ok(orders);
     }
 

@@ -4,7 +4,9 @@ import com.pragma.plazoleta.application.dto.request.OrderDishRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
@@ -54,26 +56,30 @@ class OrderHandlerTest {
     }
 
     @Test
-    @DisplayName("Should get orders by status through service port and map to response DTO list")
+    @DisplayName("Should get orders by status through service port and map to pagination response DTO")
     void shouldGetOrdersByStatusSuccessfully() {
-        // Arrange
         OrderStatus status = OrderStatus.PENDIENTE;
         int page = 0;
         int size = 10;
 
         Order order = new Order(1L, 10L, null, status, null, 2L, List.of());
         OrderResponseDto responseDto = new OrderResponseDto(1L, 10L, null, status, null, 2L, List.of());
+        CustomPage<Order> domainPage = new CustomPage<>(List.of(order), page, size, 1L, 1);
 
-        when(orderServicePort.getOrdersByStatus(status, page, size)).thenReturn(List.of(order));
+        when(orderServicePort.getOrdersByStatus(status, page, size)).thenReturn(domainPage);
         when(orderDtoMapper.toResponseDtoList(List.of(order))).thenReturn(List.of(responseDto));
 
         // Act
-        List<OrderResponseDto> result = orderHandler.getOrdersByStatus(status, page, size);
+        PaginationResponseDto<OrderResponseDto> result = orderHandler.getOrdersByStatus(status, page, size);
 
         // Assert
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(1L, result.get(0).getId());
+        assertEquals(page, result.getCurrentPage());
+        assertEquals(size, result.getPageSize());
+        assertEquals(1L, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
+        assertEquals(1, result.getContent().size());
+        assertEquals(1L, result.getContent().get(0).getId());
         verify(orderServicePort, times(1)).getOrdersByStatus(status, page, size);
         verify(orderDtoMapper, times(1)).toResponseDtoList(List.of(order));
     }

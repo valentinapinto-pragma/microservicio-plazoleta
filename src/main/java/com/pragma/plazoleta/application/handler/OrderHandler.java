@@ -3,7 +3,9 @@ package com.pragma.plazoleta.application.handler;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
+import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
@@ -25,9 +27,16 @@ public class OrderHandler {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderResponseDto> getOrdersByStatus(OrderStatus status, int page, int size) {
-        List<Order> orders = orderServicePort.getOrdersByStatus(status, page, size);
-        return orderDtoMapper.toResponseDtoList(orders);
+    public PaginationResponseDto<OrderResponseDto> getOrdersByStatus(OrderStatus status, int page, int size) {
+        CustomPage<Order> ordersPage = orderServicePort.getOrdersByStatus(status, page, size);
+        List<OrderResponseDto> responseList = orderDtoMapper.toResponseDtoList(ordersPage.getContent());
+        return new PaginationResponseDto<>(
+                responseList,
+                ordersPage.getCurrentPage(),
+                ordersPage.getPageSize(),
+                ordersPage.getTotalElements(),
+                ordersPage.getTotalPages()
+        );
     }
 
     public OrderResponseDto assignOrder(Long id, OrderStatusRequestDto orderStatusRequestDto) {

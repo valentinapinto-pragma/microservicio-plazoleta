@@ -1,12 +1,7 @@
 package com.pragma.plazoleta.domain.useCase;
 
 import com.pragma.plazoleta.domain.exception.*;
-import com.pragma.plazoleta.domain.model.Category;
-import com.pragma.plazoleta.domain.model.Dish;
-import com.pragma.plazoleta.domain.model.Order;
-import com.pragma.plazoleta.domain.model.OrderDish;
-import com.pragma.plazoleta.domain.model.OrderStatus;
-import com.pragma.plazoleta.domain.model.RestaurantEmployee;
+import com.pragma.plazoleta.domain.model.*;
 import com.pragma.plazoleta.domain.repositoryPort.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -283,26 +278,28 @@ class OrderUseCaseTest {
         Long employeeId = 50L;
         Long restaurantId = 1L;
         RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
-
         when(userInformationPort.getAuthenticatedUserId()).thenReturn(employeeId);
         when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
-
         Order existingOrder = new Order(1000L, 10L, null, OrderStatus.PENDIENTE, null, restaurantId, validOrder.getOrderDishes());
+        CustomPage<Order> customPage = new CustomPage<>(List.of(existingOrder), 0, 10, 1L, 1);
         when(orderPersistentPort.getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10))
-                .thenReturn(List.of(existingOrder));
+                .thenReturn(customPage);
         when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(validDish1));
         when(dishPersistentPort.findById(101L)).thenReturn(Optional.of(validDish2));
 
-        List<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
+        CustomPage<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
 
         assertNotNull(result);
-        assertEquals(1, result.size());
-        Order returnedOrder = result.get(0);
+        assertEquals(0, result.getCurrentPage());
+        assertEquals(10, result.getPageSize());
+        assertEquals(1L, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
+        assertEquals(1, result.getContent().size());
+        Order returnedOrder = result.getContent().get(0);
         assertEquals(1000L, returnedOrder.getId());
         assertEquals(2, returnedOrder.getOrderDishes().size());
         assertEquals(validDish1, returnedOrder.getOrderDishes().get(0).getDish());
         assertEquals(validDish2, returnedOrder.getOrderDishes().get(1).getDish());
-
         verify(restaurantEmployeePersistentPort, times(1)).findByEmployeeId(employeeId);
         verify(orderPersistentPort, times(1)).getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10);
         verify(dishPersistentPort, times(1)).findById(100L);
@@ -369,21 +366,21 @@ class OrderUseCaseTest {
     }
 
     @Test
-    @DisplayName("Should return empty list when no orders match status and pagination")
+    @DisplayName("Should return empty page when no orders match status and pagination")
     void shouldReturnEmptyListWhenNoOrdersFound() {
         Long employeeId = 50L;
         Long restaurantId = 1L;
         RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
-
         when(userInformationPort.getAuthenticatedUserId()).thenReturn(employeeId);
         when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
+        CustomPage<Order> emptyPage = new CustomPage<>(Collections.emptyList(), 0, 10, 0L, 0);
         when(orderPersistentPort.getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10))
-                .thenReturn(Collections.emptyList());
-
-        List<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
-
+                .thenReturn(emptyPage);
+        CustomPage<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
         assertNotNull(result);
-        assertTrue(result.isEmpty());
+        assertTrue(result.getContent().isEmpty());
+        assertEquals(0L, result.getTotalElements());
+        assertEquals(0, result.getTotalPages());
         verify(orderPersistentPort, times(1)).getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10);
         verify(dishPersistentPort, never()).findById(any());
     }

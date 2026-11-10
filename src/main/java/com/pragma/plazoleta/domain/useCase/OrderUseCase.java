@@ -10,6 +10,7 @@ import com.pragma.plazoleta.domain.exception.InvalidOrderStatusException;
 import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.OrderNotFoundException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
@@ -75,7 +76,7 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     @Override
-    public List<Order> getOrdersByStatus(OrderStatus status, int page, int size) {
+    public CustomPage<Order> getOrdersByStatus(OrderStatus status, int page, int size) {
         validateStatusNotNull(status);
         validatePagination(page, size);
 
@@ -85,15 +86,15 @@ public class OrderUseCase implements OrderServicePort {
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"));
 
-        List<Order> orders = orderPersistentPort.getOrdersByRestaurantAndStatus(
+        CustomPage<Order> ordersPage = orderPersistentPort.getOrdersByRestaurantAndStatus(
                 employee.getRestaurantId(),
                 status,
                 page,
                 size
         );
 
-        enrichOrdersWithDishDetails(orders);
-        return orders;
+        enrichOrdersWithDishDetails(ordersPage.getContent());
+        return ordersPage;
     }
 
     @Override

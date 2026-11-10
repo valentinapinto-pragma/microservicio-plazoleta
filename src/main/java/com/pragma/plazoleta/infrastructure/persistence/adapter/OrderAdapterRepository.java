@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.persistence.adapter;
 
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
@@ -7,6 +8,7 @@ import com.pragma.plazoleta.infrastructure.persistence.entity.OrderEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.OrderEntityMapper;
 import com.pragma.plazoleta.infrastructure.persistence.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
@@ -35,13 +37,20 @@ public class OrderAdapterRepository implements OrderPersistentPort {
     }
 
     @Override
-    public List<Order> getOrdersByRestaurantAndStatus(Long restaurantId, OrderStatus status, int page, int size) {
+    public CustomPage<Order> getOrdersByRestaurantAndStatus(Long restaurantId, OrderStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        return orderRepository.findByIdRestaurantAndStatus(restaurantId, status, pageable)
-                .getContent()
+        Page<OrderEntity> pageResult = orderRepository.findByIdRestaurantAndStatus(restaurantId, status, pageable);
+        List<Order> orders = pageResult.getContent()
                 .stream()
                 .map(orderEntityMapper::toDomain)
                 .collect(Collectors.toList());
+        return new CustomPage<>(
+                orders,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages()
+        );
     }
 
     @Override

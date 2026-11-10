@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.persistence.adapter;
 
+import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.infrastructure.persistence.entity.OrderEntity;
@@ -98,39 +99,38 @@ class OrderAdapterRepositoryTest {
     @Test
     @DisplayName("Should successfully get orders by restaurant and status with pagination")
     void shouldGetOrdersByRestaurantAndStatusSuccessfully() {
-        // Arrange
         Pageable pageable = PageRequest.of(0, 10);
-        Page<OrderEntity> orderPage = new PageImpl<>(List.of(orderEntity));
-
+        Page<OrderEntity> orderPage = new PageImpl<>(List.of(orderEntity), pageable, 1);
         when(orderRepository.findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable)).thenReturn(orderPage);
         when(orderEntityMapper.toDomain(orderEntity)).thenReturn(order);
-
         // Act
-        List<Order> result = orderAdapterRepository.getOrdersByRestaurantAndStatus(1L, OrderStatus.PENDIENTE, 0, 10);
-
+        CustomPage<Order> result = orderAdapterRepository.getOrdersByRestaurantAndStatus(1L, OrderStatus.PENDIENTE, 0, 10);
         // Assert
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(order.getId(), result.get(0).getId());
+        assertEquals(0, result.getCurrentPage());
+        assertEquals(10, result.getPageSize());
+        assertEquals(1L, result.getTotalElements());
+        assertEquals(1, result.getTotalPages());
+        assertEquals(1, result.getContent().size());
+        assertEquals(order.getId(), result.getContent().get(0).getId());
         verify(orderRepository, times(1)).findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable);
         verify(orderEntityMapper, times(1)).toDomain(orderEntity);
     }
 
     @Test
-    @DisplayName("Should return empty list when no orders match restaurant and status")
+    @DisplayName("Should return empty custom page when no orders match restaurant and status")
     void shouldReturnEmptyListWhenNoOrdersMatch() {
         // Arrange
         Pageable pageable = PageRequest.of(0, 10);
-        Page<OrderEntity> emptyPage = new PageImpl<>(List.of());
-
+        Page<OrderEntity> emptyPage = new PageImpl<>(List.of(), pageable, 0);
         when(orderRepository.findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable)).thenReturn(emptyPage);
-
         // Act
-        List<Order> result = orderAdapterRepository.getOrdersByRestaurantAndStatus(1L, OrderStatus.PENDIENTE, 0, 10);
-
+        CustomPage<Order> result = orderAdapterRepository.getOrdersByRestaurantAndStatus(1L, OrderStatus.PENDIENTE, 0, 10);
         // Assert
         assertNotNull(result);
-        assertTrue(result.isEmpty());
+        assertTrue(result.getContent().isEmpty());
+        assertEquals(0L, result.getTotalElements());
+        assertEquals(0, result.getTotalPages());
         verify(orderRepository, times(1)).findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable);
         verify(orderEntityMapper, never()).toDomain(any(OrderEntity.class));
     }

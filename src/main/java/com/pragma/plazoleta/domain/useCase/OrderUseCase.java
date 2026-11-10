@@ -34,6 +34,8 @@ import java.util.Set;
 public class OrderUseCase implements OrderServicePort {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    public static final int MIN_PAGE_NUMBER = 0;
+    public static final int MIN_SIZE_REQUIRED = 0;
 
     private final OrderPersistentPort orderPersistentPort;
     private final DishPersistentPort dishPersistentPort;
@@ -70,7 +72,6 @@ public class OrderUseCase implements OrderServicePort {
 
         order.setStatus(OrderStatus.PENDIENTE);
         order.setDate(LocalDateTime.now(ZoneId.systemDefault()));
-        order.setChefId(null);
 
         return orderPersistentPort.save(order);
     }
@@ -195,10 +196,10 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     private void validatePagination(int page, int size) {
-        if (page < 0) {
+        if (page < MIN_PAGE_NUMBER) {
             throw new InvalidOrderDataException("The page must be greater than or equal to 0");
         }
-        if (size <= 0) {
+        if (size <= MIN_SIZE_REQUIRED) {
             throw new InvalidOrderDataException("The page size must be greater than 0");
         }
     }

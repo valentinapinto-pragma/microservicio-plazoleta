@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -32,8 +31,8 @@ public class RestaurantAdapterRepository implements RestaurantPersistentPort {
 
     @Override
     public CustomPage<Restaurant> getRestaurants(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        Page<RestaurantEntity> pageResult = restaurantRepository.findAll(pageable);
+        Pageable pageable = PageRequest.of(page, size);
+        Page<RestaurantEntity> pageResult = restaurantRepository.findAllByOrderByNameAsc(pageable);
         List<Restaurant> restaurants = pageResult.getContent()
                 .stream()
                 .map(restaurantEntityMapper::toDomain)

@@ -146,7 +146,7 @@ class RestaurantAdapterRepositoryTest {
     @DisplayName("Should return paged restaurants sorted alphabetically by name")
     void shouldReturnPagedRestaurantsSuccessfully() {
         Page<RestaurantEntity> pageResult = new PageImpl<>(List.of(entity));
-        when(restaurantRepository.findAll(any(Pageable.class))).thenReturn(pageResult);
+        when(restaurantRepository.findAllByOrderByNameAsc(any(Pageable.class))).thenReturn(pageResult);
         when(restaurantEntityMapper.toDomain(entity)).thenReturn(restaurant);
 
         CustomPage<Restaurant> result = restaurantAdapterRepository.getRestaurants(0, 5);
@@ -157,7 +157,7 @@ class RestaurantAdapterRepositoryTest {
         assertEquals(0, result.getCurrentPage());
         assertEquals(1, result.getTotalElements());
         assertEquals(1, result.getTotalPages());
-        verify(restaurantRepository).findAll(any(Pageable.class));
+        verify(restaurantRepository).findAllByOrderByNameAsc(any(Pageable.class));
         verify(restaurantEntityMapper).toDomain(entity);
     }
 }

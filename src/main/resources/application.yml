@@ -29,5 +29,5 @@ services:
 
 telegram:
   bot:
-    token: ${TELEGRAM_BOT_TOKEN:9061725449:AAF6beBpDha8Dwb7Y5P1amfErmQSMD3fLY8}
-    chat-id: ${TELEGRAM_CHAT_ID:1833923415}
+    token: ${TELEGRAM_BOT_TOKEN:}
+    chat-id: ${TELEGRAM_CHAT_ID:}

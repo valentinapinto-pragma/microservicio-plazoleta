@@ -75,6 +75,17 @@ class TelegramNotificationAdapterTest {
     }
 
     @Test
+    @DisplayName("Should simulate notification when botToken is null or blank")
+    void shouldSimulateWhenBotTokenIsMissing() {
+        TelegramNotificationAdapter unconfiguredAdapter = new TelegramNotificationAdapter(restTemplate, null, defaultChatId);
+        assertDoesNotThrow(() -> unconfiguredAdapter.sendMessage("123456789", "Test message"));
+        verifyNoInteractions(restTemplate);
+
+        TelegramNotificationAdapter blankTokenAdapter = new TelegramNotificationAdapter(restTemplate, "   ", defaultChatId);
+        assertDoesNotThrow(() -> blankTokenAdapter.sendMessage("123456789", "Test message"));
+    }
+
+    @Test
     @DisplayName("Should handle RestClientException gracefully without crashing execution")
     void shouldHandleExceptionGracefully() {
         when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(String.class)))

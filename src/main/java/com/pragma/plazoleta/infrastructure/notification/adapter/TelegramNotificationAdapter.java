@@ -20,9 +20,11 @@ public class TelegramNotificationAdapter implements MessageNotificationPort {
     private final String botToken;
     private final String defaultChatId;
 
-    public TelegramNotificationAdapter(RestTemplate restTemplate,
-                                       @Value("${telegram.bot.token:9061725449:AAF6beBpDha8Dwb7Y5P1amfErmQSMD3fLY8}") String botToken,
-                                       @Value("${telegram.bot.chat-id:1833923415}") String defaultChatId) {
+    public TelegramNotificationAdapter(
+            RestTemplate restTemplate,
+            @Value("${telegram.bot.token:}") String botToken,
+            @Value("${telegram.bot.chat-id:}") String defaultChatId
+    ) {
         this.restTemplate = restTemplate;
         this.botToken = botToken;
         this.defaultChatId = defaultChatId;
@@ -30,6 +32,11 @@ public class TelegramNotificationAdapter implements MessageNotificationPort {
 
     @Override
     public void sendMessage(String destination, String message) {
+        if (botToken == null || botToken.isBlank()) {
+            log.warn("Token de Telegram no configurado. Notificación simulada a {}: {}", destination, message);
+            return;
+        }
+
         String targetChatId = (destination != null && destination.matches("\\d{8,12}")) ? destination : defaultChatId;
         String url = "https://api.telegram.org/bot" + botToken + "/sendMessage";
 
@@ -45,7 +52,7 @@ public class TelegramNotificationAdapter implements MessageNotificationPort {
             restTemplate.postForEntity(url, request, String.class);
             log.info("Notificación enviada exitosamente por Telegram a chatId: {}", targetChatId);
         } catch (Exception e) {
-            log.error("Error al enviar notificación por Telegram: {}", e.getMessage());
+            log.error("Error al enviar notificación por Telegram a {}: {}", targetChatId, e.getMessage());
         }
     }
 }

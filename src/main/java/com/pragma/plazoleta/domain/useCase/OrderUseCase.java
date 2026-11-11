@@ -146,11 +146,9 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     private void notifyClientOrderReady(Order order, String securityPin) {
-        if (messageNotificationPort != null && userInformationPort != null) {
-            String clientPhone = userInformationPort.getClientPhoneNumber(order.getClientId());
-            String message = String.format("¡Hola! Tu pedido #%d está LISTO para ser reclamado. Tu PIN de seguridad es: %s", order.getId(), securityPin);
-            messageNotificationPort.sendMessage(clientPhone, message);
-        }
+        String clientPhone = userInformationPort.getClientPhoneNumber(order.getClientId());
+        String message = String.format("¡Hola! Tu pedido #%d está LISTO para ser reclamado. Tu PIN de seguridad es: %s", order.getId(), securityPin);
+        messageNotificationPort.sendMessage(clientPhone, message);
     }
 
     private String generateSecurityPin() {

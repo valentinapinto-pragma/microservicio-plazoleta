@@ -88,15 +88,12 @@ public class OrderUseCase implements OrderServicePort {
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException(EMPLOYEE_NOT_ASSIGNED_MESSAGE));
 
-        CustomPage<Order> ordersPage = orderPersistentPort.getOrdersByRestaurantAndStatus(
+        return orderPersistentPort.getOrdersByRestaurantAndStatus(
                 employee.getRestaurantId(),
                 status,
                 page,
                 size
         );
-
-        enrichOrdersWithDishDetails(ordersPage.getContent());
-        return ordersPage;
     }
 
     @Override
@@ -118,9 +115,7 @@ public class OrderUseCase implements OrderServicePort {
         order.setStatus(OrderStatus.EN_PREPARACION);
         order.setChefId(employeeId);
 
-        Order savedOrder = orderPersistentPort.save(order);
-        enrichOrdersWithDishDetails(List.of(savedOrder));
-        return savedOrder;
+        return orderPersistentPort.save(order);
     }
 
     @Override
@@ -147,7 +142,6 @@ public class OrderUseCase implements OrderServicePort {
 
         notifyClientOrderReady(savedOrder, securityPin);
 
-        enrichOrdersWithDishDetails(List.of(savedOrder));
         return savedOrder;
     }
 
@@ -206,17 +200,6 @@ public class OrderUseCase implements OrderServicePort {
     private void validateEmployeeIdNotNull(Long employeeId) {
         if (employeeId == null) {
             throw new InvalidOrderDataException("Employee id cannot be null");
-        }
-    }
-
-    private void enrichOrdersWithDishDetails(List<Order> orders) {
-        for (Order order : orders) {
-            if (order.getOrderDishes() != null) {
-                for (OrderDish orderDish : order.getOrderDishes()) {
-                    dishPersistentPort.findById(orderDish.getDishId())
-                            .ifPresent(orderDish::setDish);
-                }
-            }
         }
     }
 

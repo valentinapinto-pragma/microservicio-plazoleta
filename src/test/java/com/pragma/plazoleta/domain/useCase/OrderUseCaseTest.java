@@ -284,8 +284,6 @@ class OrderUseCaseTest {
         CustomPage<Order> customPage = new CustomPage<>(List.of(existingOrder), 0, 10, 1L, 1);
         when(orderPersistentPort.getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10))
                 .thenReturn(customPage);
-        when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(validDish1));
-        when(dishPersistentPort.findById(101L)).thenReturn(Optional.of(validDish2));
 
         CustomPage<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
 
@@ -298,12 +296,9 @@ class OrderUseCaseTest {
         Order returnedOrder = result.getContent().get(0);
         assertEquals(1000L, returnedOrder.getId());
         assertEquals(2, returnedOrder.getOrderDishes().size());
-        assertEquals(validDish1, returnedOrder.getOrderDishes().get(0).getDish());
-        assertEquals(validDish2, returnedOrder.getOrderDishes().get(1).getDish());
         verify(restaurantEmployeePersistentPort, times(1)).findByEmployeeId(employeeId);
         verify(orderPersistentPort, times(1)).getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10);
-        verify(dishPersistentPort, times(1)).findById(100L);
-        verify(dishPersistentPort, times(1)).findById(101L);
+        verify(dishPersistentPort, never()).findById(any());
     }
 
     @Test
@@ -403,8 +398,6 @@ class OrderUseCaseTest {
         when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
         when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(existingOrder));
         when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(validDish1));
-        when(dishPersistentPort.findById(101L)).thenReturn(Optional.of(validDish2));
 
         Order result = orderUseCase.assignOrder(orderId);
 
@@ -412,8 +405,7 @@ class OrderUseCaseTest {
         assertEquals(OrderStatus.EN_PREPARACION, result.getStatus());
         assertEquals(employeeId, result.getChefId());
         verify(orderPersistentPort, times(1)).save(existingOrder);
-        verify(dishPersistentPort, times(1)).findById(100L);
-        verify(dishPersistentPort, times(1)).findById(101L);
+        verify(dishPersistentPort, never()).findById(any());
     }
 
     @Test
@@ -510,7 +502,7 @@ class OrderUseCaseTest {
     // TESTS: HU-14 - updateOrderToReady
 
     @Test
-    @DisplayName("Should successfully update order to ready, generate PIN, notify client, and enrich dishes")
+    @DisplayName("Should successfully update order to ready, generate PIN, and notify client")
     void shouldUpdateOrderToReadySuccessfully() {
         Long orderId = 100L;
         Long employeeId = 3L;
@@ -528,7 +520,6 @@ class OrderUseCaseTest {
         when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(existingOrder));
         when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userInformationPort.getClientPhoneNumber(clientId)).thenReturn("+573001234567");
-        when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(validDish1));
 
         Order result = orderUseCase.updateOrderToReady(orderId);
 
@@ -539,7 +530,7 @@ class OrderUseCaseTest {
         verify(orderPersistentPort, times(1)).save(existingOrder);
         verify(userInformationPort, times(1)).getClientPhoneNumber(clientId);
         verify(messageNotificationPort, times(1)).sendMessage(eq("+573001234567"), contains(result.getSecurityPin()));
-        assertNotNull(result.getOrderDishes().get(0).getDish());
+        verify(dishPersistentPort, never()).findById(any());
     }
 
     @Test

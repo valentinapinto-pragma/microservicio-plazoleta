@@ -2,7 +2,6 @@ package com.pragma.plazoleta.application.handler;
 
 import com.pragma.plazoleta.application.dto.request.OrderDishRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
-import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
@@ -89,23 +88,22 @@ class OrderHandlerTest {
     void shouldAssignOrderSuccessfully() {
         // Arrange
         Long orderId = 100L;
-        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
 
         Order updatedOrder = new Order(orderId, 10L, null, OrderStatus.EN_PREPARACION, 3L, 1L, List.of());
         OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.EN_PREPARACION, 3L, 1L, List.of());
 
-        when(orderServicePort.assignOrder(orderId, OrderStatus.EN_PREPARACION)).thenReturn(updatedOrder);
+        when(orderServicePort.assignOrder(orderId)).thenReturn(updatedOrder);
         when(orderDtoMapper.toResponseDto(updatedOrder)).thenReturn(responseDto);
 
         // Act
-        OrderResponseDto result = orderHandler.assignOrder(orderId, requestDto);
+        OrderResponseDto result = orderHandler.assignOrder(orderId);
 
         // Assert
         assertNotNull(result);
         assertEquals(orderId, result.getId());
         assertEquals(OrderStatus.EN_PREPARACION, result.getStatus());
         assertEquals(3L, result.getIdChef());
-        verify(orderServicePort, times(1)).assignOrder(orderId, OrderStatus.EN_PREPARACION);
+        verify(orderServicePort, times(1)).assignOrder(orderId);
         verify(orderDtoMapper, times(1)).toResponseDto(updatedOrder);
     }
 

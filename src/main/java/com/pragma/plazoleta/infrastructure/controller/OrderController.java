@@ -1,7 +1,6 @@
 package com.pragma.plazoleta.infrastructure.controller;
 
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
-import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
 import com.pragma.plazoleta.application.handler.OrderHandler;
@@ -72,10 +71,8 @@ public class OrderController {
     })
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('EMPLOYEE')")
-    public ResponseEntity<OrderResponseDto> assignOrder(
-            @PathVariable Long id,
-            @Valid @RequestBody OrderStatusRequestDto orderStatusRequestDto) {
-        OrderResponseDto updatedOrder = orderHandler.assignOrder(id, orderStatusRequestDto);
+    public ResponseEntity<OrderResponseDto> assignOrder(@PathVariable Long id) {
+        OrderResponseDto updatedOrder = orderHandler.assignOrder(id);
         return ResponseEntity.ok(updatedOrder);
     }
 

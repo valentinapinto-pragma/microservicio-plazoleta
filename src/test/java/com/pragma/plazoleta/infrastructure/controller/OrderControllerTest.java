@@ -3,7 +3,6 @@ package com.pragma.plazoleta.infrastructure.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pragma.plazoleta.application.dto.request.OrderDishRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
-import com.pragma.plazoleta.application.dto.request.OrderStatusRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderDishResponseDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
@@ -28,7 +27,6 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -194,7 +192,7 @@ class OrderControllerTest {
     @DisplayName("Should return 200 OK when employee requests orders by status successfully")
     void shouldReturnOkWhenGetOrdersByStatus() throws Exception {
         OrderDishResponseDto dishDto = new OrderDishResponseDto(
-                100L, "Hamburguesa", 25000, "Rica hamburguesa", "http://img.com/1", "Comida Rápida", 2
+                100L, "Hamburguesa", 25000, "Rica hamburguesa", "https://img.com/1", "Comida Rápida", 2
         );
         OrderResponseDto responseDto = new OrderResponseDto(
                 1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, List.of(dishDto)
@@ -203,7 +201,7 @@ class OrderControllerTest {
                 List.of(responseDto), 0, 10, 1L, 1
         );
 
-        when(orderHandler.getOrdersByStatus(eq(OrderStatus.PENDIENTE), eq(0), eq(10)))
+        when(orderHandler.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10))
                 .thenReturn(paginationResponse);
 
         mockMvc.perform(get("/orders")
@@ -240,7 +238,7 @@ class OrderControllerTest {
     @DisplayName("Should return 400 Bad Request when employee is not assigned to any restaurant on get orders")
     void shouldReturnBadRequestWhenEmployeeNotAssignedToRestaurant() throws Exception {
         doThrow(new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"))
-                .when(orderHandler).getOrdersByStatus(eq(OrderStatus.PENDIENTE), eq(0), eq(10));
+                .when(orderHandler).getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
 
         mockMvc.perform(get("/orders")
                         .param("status", "PENDIENTE")
@@ -258,38 +256,32 @@ class OrderControllerTest {
     @DisplayName("Should return 200 OK when employee assigns order to themself")
     void shouldReturnOkWhenAssignOrder() throws Exception {
         Long orderId = 100L;
-        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
 
         OrderResponseDto responseDto = new OrderResponseDto(
                 orderId, 10L, LocalDateTime.now(), OrderStatus.EN_PREPARACION, 3L, 1L, List.of()
         );
 
-        when(orderHandler.assignOrder(eq(orderId), any(OrderStatusRequestDto.class)))
-                .thenReturn(responseDto);
+        when(orderHandler.assignOrder(orderId)).thenReturn(responseDto);
 
         mockMvc.perform(patch("/orders/{id}/status", orderId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(orderId))
                 .andExpect(jsonPath("$.status").value("EN_PREPARACION"))
                 .andExpect(jsonPath("$.idChef").value(3L));
 
-        verify(orderHandler, times(1)).assignOrder(eq(orderId), any(OrderStatusRequestDto.class));
+        verify(orderHandler, times(1)).assignOrder(orderId);
     }
 
     @Test
     @WithMockUser(roles = "CLIENT")
     @DisplayName("Should return 403 Forbidden when client tries to assign order")
     void shouldReturnForbiddenWhenClientAssignsOrder() throws Exception {
-        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
-
         mockMvc.perform(patch("/orders/1/status")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
 
-        verify(orderHandler, never()).assignOrder(anyLong(), any());
+        verify(orderHandler, never()).assignOrder(anyLong());
     }
 
     @Test
@@ -297,14 +289,12 @@ class OrderControllerTest {
     @DisplayName("Should return 404 Not Found when order does not exist on assign")
     void shouldReturnNotFoundWhenOrderNotFoundOnAssign() throws Exception {
         Long orderId = 999L;
-        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
 
         doThrow(new OrderNotFoundException("Order not found with id: 999"))
-                .when(orderHandler).assignOrder(eq(orderId), any(OrderStatusRequestDto.class));
+                .when(orderHandler).assignOrder(orderId);
 
         mockMvc.perform(patch("/orders/{id}/status", orderId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Order not found with id: 999"));
     }
@@ -314,14 +304,12 @@ class OrderControllerTest {
     @DisplayName("Should return 400 Bad Request when order belongs to a different restaurant on assign")
     void shouldReturnBadRequestWhenOrderBelongsToOtherRestaurantOnAssign() throws Exception {
         Long orderId = 100L;
-        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
 
         doThrow(new OrderDoesNotBelongToRestaurantException("The order does not belong to the restaurant where the employee works"))
-                .when(orderHandler).assignOrder(eq(orderId), any(OrderStatusRequestDto.class));
+                .when(orderHandler).assignOrder(orderId);
 
         mockMvc.perform(patch("/orders/{id}/status", orderId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("The order does not belong to the restaurant where the employee works"));
     }
@@ -331,29 +319,14 @@ class OrderControllerTest {
     @DisplayName("Should return 400 Bad Request when order status transition is invalid on assign")
     void shouldReturnBadRequestWhenInvalidOrderStatusOnAssign() throws Exception {
         Long orderId = 100L;
-        OrderStatusRequestDto requestDto = new OrderStatusRequestDto(OrderStatus.EN_PREPARACION);
 
         doThrow(new InvalidOrderStatusException("Only orders in PENDIENTE status can be assigned to a chef"))
-                .when(orderHandler).assignOrder(eq(orderId), any(OrderStatusRequestDto.class));
+                .when(orderHandler).assignOrder(orderId);
 
         mockMvc.perform(patch("/orders/{id}/status", orderId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Only orders in PENDIENTE status can be assigned to a chef"));
-    }
-
-    @Test
-    @WithMockUser(roles = "EMPLOYEE")
-    @DisplayName("Should return 400 Bad Request when status is null in body on assign")
-    void shouldReturnBadRequestWhenStatusIsNullInBodyOnAssign() throws Exception {
-        mockMvc.perform(patch("/orders/{id}/status", 100L)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"status\": null}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("status: Order status cannot be null"));
-
-        verify(orderHandler, never()).assignOrder(anyLong(), any());
     }
 
     // TESTS: PATCH /orders/{id}/ready (HU-14)

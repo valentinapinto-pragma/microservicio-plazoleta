@@ -54,8 +54,8 @@ class OrderUseCaseTest {
     void setUp() {
         Category category = new Category(1L, "Comida Rápida", "Platos rápidos");
 
-        validDish1 = new Dish(100L, "Hamburguesa", 25000, "Rica hamburguesa", "http://img.com/1", category, 1L, true);
-        validDish2 = new Dish(101L, "Papas Fritas", 10000, "Papas crocantes", "http://img.com/2", category, 1L, true);
+        validDish1 = new Dish(100L, "Hamburguesa", 25000, "Rica hamburguesa", "https://img.com/1", category, 1L, true);
+        validDish2 = new Dish(101L, "Papas Fritas", 10000, "Papas crocantes", "https://img.com/2", category, 1L, true);
 
         List<OrderDish> dishes = new ArrayList<>();
         dishes.add(new OrderDish(null, null, 100L, 2));
@@ -387,6 +387,8 @@ class OrderUseCaseTest {
 
     // TESTS: HU-13 - assignOrder
 
+    // TESTS: HU-13 - assignOrder
+
     @Test
     @DisplayName("Should successfully assign order to authenticated employee and change status to EN_PREPARACION")
     void shouldAssignOrderSuccessfully() {
@@ -404,7 +406,7 @@ class OrderUseCaseTest {
         when(dishPersistentPort.findById(100L)).thenReturn(Optional.of(validDish1));
         when(dishPersistentPort.findById(101L)).thenReturn(Optional.of(validDish2));
 
-        Order result = orderUseCase.assignOrder(orderId, OrderStatus.EN_PREPARACION);
+        Order result = orderUseCase.assignOrder(orderId);
 
         assertNotNull(result);
         assertEquals(OrderStatus.EN_PREPARACION, result.getStatus());
@@ -419,20 +421,9 @@ class OrderUseCaseTest {
     void shouldThrowWhenOrderIdIsNullOnAssign() {
         InvalidOrderDataException exception = assertThrows(
                 InvalidOrderDataException.class,
-                () -> orderUseCase.assignOrder(null, OrderStatus.EN_PREPARACION)
+                () -> orderUseCase.assignOrder(null)
         );
         assertEquals("Order id cannot be null", exception.getMessage());
-        verifyNoInteractions(restaurantEmployeePersistentPort, orderPersistentPort);
-    }
-
-    @Test
-    @DisplayName("Should throw exception when status is null on assign")
-    void shouldThrowWhenStatusIsNullOnAssign() {
-        InvalidOrderDataException exception = assertThrows(
-                InvalidOrderDataException.class,
-                () -> orderUseCase.assignOrder(100L, null)
-        );
-        assertEquals("Order status cannot be null", exception.getMessage());
         verifyNoInteractions(restaurantEmployeePersistentPort, orderPersistentPort);
     }
 
@@ -443,20 +434,9 @@ class OrderUseCaseTest {
 
         InvalidOrderDataException exception = assertThrows(
                 InvalidOrderDataException.class,
-                () -> orderUseCase.assignOrder(100L, OrderStatus.EN_PREPARACION)
+                () -> orderUseCase.assignOrder(100L)
         );
         assertEquals("Employee id cannot be null", exception.getMessage());
-        verifyNoInteractions(restaurantEmployeePersistentPort, orderPersistentPort);
-    }
-
-    @Test
-    @DisplayName("Should throw exception when requested status is not EN_PREPARACION on assign")
-    void shouldThrowWhenStatusIsNotInPreparationOnAssign() {
-        InvalidOrderStatusException exception = assertThrows(
-                InvalidOrderStatusException.class,
-                () -> orderUseCase.assignOrder(100L, OrderStatus.LISTO)
-        );
-        assertEquals("Status transition is invalid; only EN_PREPARACION is allowed for order assignment", exception.getMessage());
         verifyNoInteractions(restaurantEmployeePersistentPort, orderPersistentPort);
     }
 
@@ -468,7 +448,7 @@ class OrderUseCaseTest {
 
         EmployeeNotAssignedToRestaurantException exception = assertThrows(
                 EmployeeNotAssignedToRestaurantException.class,
-                () -> orderUseCase.assignOrder(100L, OrderStatus.EN_PREPARACION)
+                () -> orderUseCase.assignOrder(100L)
         );
         assertEquals("The employee is not assigned to any restaurant", exception.getMessage());
         verify(orderPersistentPort, never()).findById(any());
@@ -485,7 +465,7 @@ class OrderUseCaseTest {
 
         OrderNotFoundException exception = assertThrows(
                 OrderNotFoundException.class,
-                () -> orderUseCase.assignOrder(999L, OrderStatus.EN_PREPARACION)
+                () -> orderUseCase.assignOrder(999L)
         );
         assertEquals("Order not found with id: 999", exception.getMessage());
         verify(orderPersistentPort, never()).save(any());
@@ -503,7 +483,7 @@ class OrderUseCaseTest {
 
         OrderDoesNotBelongToRestaurantException exception = assertThrows(
                 OrderDoesNotBelongToRestaurantException.class,
-                () -> orderUseCase.assignOrder(100L, OrderStatus.EN_PREPARACION)
+                () -> orderUseCase.assignOrder(100L)
         );
         assertEquals("The order does not belong to the restaurant where the employee works", exception.getMessage());
         verify(orderPersistentPort, never()).save(any());
@@ -521,7 +501,7 @@ class OrderUseCaseTest {
 
         InvalidOrderStatusException exception = assertThrows(
                 InvalidOrderStatusException.class,
-                () -> orderUseCase.assignOrder(100L, OrderStatus.EN_PREPARACION)
+                () -> orderUseCase.assignOrder(100L)
         );
         assertEquals("Only orders in PENDIENTE status can be assigned to a chef", exception.getMessage());
         verify(orderPersistentPort, never()).save(any());

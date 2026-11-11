@@ -36,6 +36,7 @@ public class OrderUseCase implements OrderServicePort {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     public static final int MIN_PAGE_NUMBER = 0;
     public static final int MIN_SIZE_REQUIRED = 0;
+    private static final String EMPLOYEE_NOT_ASSIGNED_MESSAGE = "The employee is not assigned to any restaurant";
 
     private final OrderPersistentPort orderPersistentPort;
     private final DishPersistentPort dishPersistentPort;
@@ -85,7 +86,7 @@ public class OrderUseCase implements OrderServicePort {
         validateEmployeeIdNotNull(employeeId);
 
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
-                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"));
+                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException(EMPLOYEE_NOT_ASSIGNED_MESSAGE));
 
         CustomPage<Order> ordersPage = orderPersistentPort.getOrdersByRestaurantAndStatus(
                 employee.getRestaurantId(),
@@ -99,16 +100,14 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     @Override
-    public Order assignOrder(Long orderId, OrderStatus status) {
+    public Order assignOrder(Long orderId) {
         validateOrderIdNotNull(orderId);
-        validateStatusNotNull(status);
-        validateStatusIsInPreparation(status);
 
         Long employeeId = userInformationPort.getAuthenticatedUserId();
         validateEmployeeIdNotNull(employeeId);
 
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
-                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"));
+                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException(EMPLOYEE_NOT_ASSIGNED_MESSAGE));
 
         Order order = orderPersistentPort.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
@@ -132,7 +131,7 @@ public class OrderUseCase implements OrderServicePort {
         validateEmployeeIdNotNull(employeeId);
 
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
-                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"));
+                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException(EMPLOYEE_NOT_ASSIGNED_MESSAGE));
 
         Order order = orderPersistentPort.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
@@ -168,12 +167,6 @@ public class OrderUseCase implements OrderServicePort {
     private void validateOrderIsInPreparationStatus(Order order) {
         if (order.getStatus() != OrderStatus.EN_PREPARACION) {
             throw new InvalidOrderStatusException("Only orders in EN_PREPARACION status can be marked as ready");
-        }
-    }
-
-    private void validateStatusIsInPreparation(OrderStatus status) {
-        if (status != OrderStatus.EN_PREPARACION) {
-            throw new InvalidOrderStatusException("Status transition is invalid; only EN_PREPARACION is allowed for order assignment");
         }
     }
 

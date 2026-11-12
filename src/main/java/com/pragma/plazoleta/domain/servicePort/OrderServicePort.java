@@ -9,4 +9,5 @@ public interface OrderServicePort {
     CustomPage<Order> getOrdersByStatus(OrderStatus status, int page, int size);
     Order assignOrder(Long orderId);
     Order updateOrderToReady(Long orderId);
+    Order deliverOrder(Long orderId, String securityPin);
 }

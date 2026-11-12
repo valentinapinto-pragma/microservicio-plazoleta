@@ -7,6 +7,7 @@ import com.pragma.plazoleta.domain.exception.DishNotFoundException;
 import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderStatusException;
+import com.pragma.plazoleta.domain.exception.InvalidSecurityPinException;
 import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.OrderNotFoundException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
@@ -41,6 +42,7 @@ public class OrderUseCase implements OrderServicePort {
     private static final int PIN_LENGTH = 6;
     private static final int PIN_UPPER_BOUND = 1_000_000; // 10^PIN_LENGTH
     private static final String PIN_FORMAT = "%0" + PIN_LENGTH + "d";
+    private static final String ORDER_READY_MESSAGE_TEMPLATE = "¡Hola! Tu pedido #%d está LISTO para ser reclamado. Tu PIN de seguridad es: %s";
 
     private final OrderPersistentPort orderPersistentPort;
     private final DishPersistentPort dishPersistentPort;
@@ -149,15 +151,56 @@ public class OrderUseCase implements OrderServicePort {
         return savedOrder;
     }
 
+    @Override
+    public Order deliverOrder(Long orderId, String securityPin) {
+        validateOrderIdNotNull(orderId);
+        validateSecurityPinNotNullOrBlank(securityPin);
+
+        Long employeeId = userInformationPort.getAuthenticatedUserId();
+        validateEmployeeIdNotNull(employeeId);
+
+        RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
+                .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException(EMPLOYEE_NOT_ASSIGNED_MESSAGE));
+
+        Order order = orderPersistentPort.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
+
+        validateOrderBelongsToRestaurant(order, employee.getRestaurantId());
+        validateOrderIsInReadyStatus(order);
+        validateSecurityPinMatches(order, securityPin);
+
+        order.setStatus(OrderStatus.ENTREGADO);
+
+        return orderPersistentPort.save(order);
+    }
+
     private void notifyClientOrderReady(Order order, String securityPin) {
         String clientPhone = userInformationPort.getClientPhoneNumber(order.getClientId());
-        String message = String.format("¡Hola! Tu pedido #%d está LISTO para ser reclamado. Tu PIN de seguridad es: %s", order.getId(), securityPin);
+        String message = String.format(ORDER_READY_MESSAGE_TEMPLATE, order.getId(), securityPin);
         messageNotificationPort.sendMessage(clientPhone, message);
     }
 
     private String generateSecurityPin() {
         int pinNumber = SECURE_RANDOM.nextInt(PIN_UPPER_BOUND);
         return String.format(PIN_FORMAT, pinNumber);
+    }
+
+    private void validateSecurityPinNotNullOrBlank(String securityPin) {
+        if (securityPin == null || securityPin.isBlank()) {
+            throw new InvalidSecurityPinException("Security PIN cannot be null or empty");
+        }
+    }
+
+    private void validateOrderIsInReadyStatus(Order order) {
+        if (order.getStatus() != OrderStatus.LISTO) {
+            throw new InvalidOrderStatusException("Only orders in LISTO status can be delivered");
+        }
+    }
+
+    private void validateSecurityPinMatches(Order order, String securityPin) {
+        if (!securityPin.equals(order.getSecurityPin())) {
+            throw new InvalidSecurityPinException("Invalid security PIN for order id: " + order.getId());
+        }
     }
 
     private void validateOrderIsInPreparationStatus(Order order) {

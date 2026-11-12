@@ -622,4 +622,124 @@ class OrderUseCaseTest {
         assertEquals("Only orders in EN_PREPARACION status can be marked as ready", exception.getMessage());
         verify(orderPersistentPort, never()).save(any());
     }
+
+    // HU-15: deliverOrder Tests
+
+    @Test
+    @DisplayName("Should deliver order successfully when status is LISTO and PIN matches")
+    void shouldDeliverOrderSuccessfully() {
+        // Arrange
+        Long orderId = 1L;
+        String pin = "123456";
+        Long employeeId = 5L;
+        Long restaurantId = 10L;
+
+        RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
+        Order order = new Order();
+        order.setId(orderId);
+        order.setRestaurantId(restaurantId);
+        order.setStatus(OrderStatus.LISTO);
+        order.setSecurityPin(pin);
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(employeeId);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        Order deliveredOrder = orderUseCase.deliverOrder(orderId, pin);
+
+        // Assert
+        assertNotNull(deliveredOrder);
+        assertEquals(OrderStatus.ENTREGADO, deliveredOrder.getStatus());
+        verify(orderPersistentPort, times(1)).save(order);
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidOrderDataException when orderId is null on deliver")
+    void shouldThrowWhenOrderIdIsNullOnDeliver() {
+        assertThrows(InvalidOrderDataException.class, () -> orderUseCase.deliverOrder(null, "123456"));
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidSecurityPinException when securityPin is null or blank on deliver")
+    void shouldThrowWhenSecurityPinIsNullOrEmptyOnDeliver() {
+        assertThrows(InvalidSecurityPinException.class, () -> orderUseCase.deliverOrder(1L, null));
+        assertThrows(InvalidSecurityPinException.class, () -> orderUseCase.deliverOrder(1L, "   "));
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidOrderDataException when employeeId is null on deliver")
+    void shouldThrowWhenEmployeeIdIsNullOnDeliver() {
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(null);
+        assertThrows(InvalidOrderDataException.class, () -> orderUseCase.deliverOrder(1L, "123456"));
+    }
+
+    @Test
+    @DisplayName("Should throw EmployeeNotAssignedToRestaurantException when employee has no restaurant on deliver")
+    void shouldThrowWhenEmployeeNotAssignedOnDeliver() {
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(5L);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(5L)).thenReturn(Optional.empty());
+
+        assertThrows(EmployeeNotAssignedToRestaurantException.class, () -> orderUseCase.deliverOrder(1L, "123456"));
+    }
+
+    @Test
+    @DisplayName("Should throw OrderNotFoundException when order does not exist on deliver")
+    void shouldThrowWhenOrderNotFoundOnDeliver() {
+        RestaurantEmployee employee = new RestaurantEmployee(1L, 10L, 5L);
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(5L);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(5L)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(OrderNotFoundException.class, () -> orderUseCase.deliverOrder(1L, "123456"));
+    }
+
+    @Test
+    @DisplayName("Should throw OrderDoesNotBelongToRestaurantException when order belongs to another restaurant on deliver")
+    void shouldThrowWhenOrderDoesNotBelongToRestaurantOnDeliver() {
+        RestaurantEmployee employee = new RestaurantEmployee(1L, 10L, 5L);
+        Order order = new Order();
+        order.setId(1L);
+        order.setRestaurantId(999L);
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(5L);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(5L)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(OrderDoesNotBelongToRestaurantException.class, () -> orderUseCase.deliverOrder(1L, "123456"));
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidOrderStatusException when order is not in LISTO status on deliver")
+    void shouldThrowWhenOrderIsNotInReadyStatusOnDeliver() {
+        RestaurantEmployee employee = new RestaurantEmployee(1L, 10L, 5L);
+        Order order = new Order();
+        order.setId(1L);
+        order.setRestaurantId(10L);
+        order.setStatus(OrderStatus.EN_PREPARACION);
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(5L);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(5L)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(InvalidOrderStatusException.class, () -> orderUseCase.deliverOrder(1L, "123456"));
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidSecurityPinException when securityPin does not match on deliver")
+    void shouldThrowWhenSecurityPinDoesNotMatchOnDeliver() {
+        RestaurantEmployee employee = new RestaurantEmployee(1L, 10L, 5L);
+        Order order = new Order();
+        order.setId(1L);
+        order.setRestaurantId(10L);
+        order.setStatus(OrderStatus.LISTO);
+        order.setSecurityPin("123456");
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(5L);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(5L)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(InvalidSecurityPinException.class, () -> orderUseCase.deliverOrder(1L, "999999"));
+    }
 }

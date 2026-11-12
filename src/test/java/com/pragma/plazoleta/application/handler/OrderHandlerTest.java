@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.application.handler;
 
+import com.pragma.plazoleta.application.dto.request.OrderDeliveryRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderDishRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
@@ -125,5 +126,29 @@ class OrderHandlerTest {
         assertEquals(OrderStatus.LISTO, result.getStatus());
         verify(orderServicePort, times(1)).updateOrderToReady(orderId);
         verify(orderDtoMapper, times(1)).toResponseDto(readyOrder);
+    }
+
+    @Test
+    @DisplayName("Should deliver order through service port and map to response DTO")
+    void shouldDeliverOrderSuccessfully() {
+        // Arrange
+        Long orderId = 100L;
+        String pin = "123456";
+        OrderDeliveryRequestDto deliveryDto = new OrderDeliveryRequestDto(pin);
+        Order deliveredOrder = new Order(orderId, 10L, null, OrderStatus.ENTREGADO, 3L, 1L, List.of());
+        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.ENTREGADO, 3L, 1L, List.of());
+
+        when(orderServicePort.deliverOrder(orderId, pin)).thenReturn(deliveredOrder);
+        when(orderDtoMapper.toResponseDto(deliveredOrder)).thenReturn(responseDto);
+
+        // Act
+        OrderResponseDto result = orderHandler.deliverOrder(orderId, deliveryDto);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(orderId, result.getId());
+        assertEquals(OrderStatus.ENTREGADO, result.getStatus());
+        verify(orderServicePort, times(1)).deliverOrder(orderId, pin);
+        verify(orderDtoMapper, times(1)).toResponseDto(deliveredOrder);
     }
 }

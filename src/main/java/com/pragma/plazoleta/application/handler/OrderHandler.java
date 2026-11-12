@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.application.handler;
 
+import com.pragma.plazoleta.application.dto.request.OrderDeliveryRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
@@ -45,6 +46,11 @@ public class OrderHandler {
 
     public OrderResponseDto updateOrderToReady(Long id) {
         Order updatedOrder = orderServicePort.updateOrderToReady(id);
+        return orderDtoMapper.toResponseDto(updatedOrder);
+    }
+
+    public OrderResponseDto deliverOrder(Long id, OrderDeliveryRequestDto orderDeliveryRequestDto) {
+        Order updatedOrder = orderServicePort.deliverOrder(id, orderDeliveryRequestDto.getSecurityPin());
         return orderDtoMapper.toResponseDto(updatedOrder);
     }
 }

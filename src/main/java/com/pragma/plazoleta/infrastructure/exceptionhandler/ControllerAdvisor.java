@@ -124,4 +124,10 @@ public class ControllerAdvisor {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponseDto(ex.getMessage()));
     }
+
+    @ExceptionHandler(InvalidSecurityPinException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvalidSecurityPinException(InvalidSecurityPinException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
 }

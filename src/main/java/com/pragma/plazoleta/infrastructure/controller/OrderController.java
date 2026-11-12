@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.controller;
 
+import com.pragma.plazoleta.application.dto.request.OrderDeliveryRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderResponseDto;
 import com.pragma.plazoleta.application.dto.response.PaginationResponseDto;
@@ -88,6 +89,24 @@ public class OrderController {
     @PreAuthorize("hasRole('EMPLOYEE')")
     public ResponseEntity<OrderResponseDto> updateOrderToReady(@PathVariable Long id) {
         OrderResponseDto updatedOrder = orderHandler.updateOrderToReady(id);
+        return ResponseEntity.ok(updatedOrder);
+    }
+
+    @Operation(summary = "Deliver order to client",
+            description = "Allows an authenticated employee to deliver an order that is in LISTO status by verifying the provided security PIN")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order delivered successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid security PIN, invalid status transition, or order does not belong to employee's restaurant", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden: User is not authorized or not an employee", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content)
+    })
+    @PatchMapping("/{id}/deliver")
+    @PreAuthorize("hasRole('EMPLOYEE')")
+    public ResponseEntity<OrderResponseDto> deliverOrder(
+            @PathVariable Long id,
+            @Valid @RequestBody OrderDeliveryRequestDto orderDeliveryRequestDto
+    ) {
+        OrderResponseDto updatedOrder = orderHandler.deliverOrder(id, orderDeliveryRequestDto);
         return ResponseEntity.ok(updatedOrder);
     }
 }

@@ -236,4 +236,17 @@ class ControllerAdvisorTest {
         assertNotNull(response.getBody());
         assertEquals("Invalid employee", response.getBody().getMessage());
     }
+
+    @Test
+    @DisplayName("Should handle InvalidSecurityPinException and return 400 Bad Request")
+    void shouldHandleInvalidSecurityPinException() {
+        InvalidSecurityPinException ex = new InvalidSecurityPinException("Invalid security PIN");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleInvalidSecurityPinException(ex);
+
+        assertNotNull(response);
+        ErrorResponseDto body = response.getBody();
+        assertNotNull(body);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Invalid security PIN", body.getMessage());
+    }
 }

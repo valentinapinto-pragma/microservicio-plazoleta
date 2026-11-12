@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pragma.plazoleta.application.dto.request.OrderDeliveryRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderDishRequestDto;
 import com.pragma.plazoleta.application.dto.request.OrderRequestDto;
 import com.pragma.plazoleta.application.dto.response.OrderDishResponseDto;
@@ -359,5 +360,91 @@ class OrderControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(orderHandler, never()).updateOrderToReady(anyLong());
+    }
+
+    // TESTS: PATCH /orders/{id}/deliver (HU-15)
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 200 OK when employee delivers order with valid PIN")
+    void shouldReturnOkWhenDeliverOrder() throws Exception {
+        Long orderId = 1L;
+        OrderDeliveryRequestDto requestDto = new OrderDeliveryRequestDto("123456");
+        OrderResponseDto responseDto = new OrderResponseDto(
+                orderId, 10L, LocalDateTime.now(), OrderStatus.ENTREGADO, 5L, 1L, List.of()
+        );
+
+        when(orderHandler.deliverOrder(eq(orderId), any(OrderDeliveryRequestDto.class))).thenReturn(responseDto);
+
+        mockMvc.perform(patch("/orders/{id}/deliver", orderId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId))
+                .andExpect(jsonPath("$.status").value("ENTREGADO"));
+
+        verify(orderHandler, times(1)).deliverOrder(eq(orderId), any(OrderDeliveryRequestDto.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 403 Forbidden when client tries to deliver order")
+    void shouldReturnForbiddenWhenClientDeliversOrder() throws Exception {
+        OrderDeliveryRequestDto requestDto = new OrderDeliveryRequestDto("123456");
+
+        mockMvc.perform(patch("/orders/1/deliver")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isForbidden());
+
+        verify(orderHandler, never()).deliverOrder(anyLong(), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 400 Bad Request when delivery request body has invalid PIN format")
+    void shouldReturnBadRequestWhenInvalidPinFormatOnDeliver() throws Exception {
+        OrderDeliveryRequestDto requestDto = new OrderDeliveryRequestDto("12"); // Debe tener 6 dígitos
+
+        mockMvc.perform(patch("/orders/1/deliver")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest());
+
+        verify(orderHandler, never()).deliverOrder(anyLong(), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 404 Not Found when order does not exist on deliver")
+    void shouldReturnNotFoundWhenOrderNotFoundOnDeliver() throws Exception {
+        Long orderId = 999L;
+        OrderDeliveryRequestDto requestDto = new OrderDeliveryRequestDto("123456");
+
+        doThrow(new OrderNotFoundException("Order not found with id: 999"))
+                .when(orderHandler).deliverOrder(eq(orderId), any(OrderDeliveryRequestDto.class));
+
+        mockMvc.perform(patch("/orders/{id}/deliver", orderId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Order not found with id: 999"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 400 Bad Request when PIN is incorrect on deliver")
+    void shouldReturnBadRequestWhenPinMismatchOnDeliver() throws Exception {
+        Long orderId = 1L;
+        OrderDeliveryRequestDto requestDto = new OrderDeliveryRequestDto("999999");
+
+        doThrow(new InvalidSecurityPinException("Invalid security PIN for order id: 1"))
+                .when(orderHandler).deliverOrder(eq(orderId), any(OrderDeliveryRequestDto.class));
+
+        mockMvc.perform(patch("/orders/{id}/deliver", orderId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid security PIN for order id: 1"));
     }
 }

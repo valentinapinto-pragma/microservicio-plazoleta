@@ -1,5 +1,10 @@
 package com.pragma.plazoleta.infrastructure.notification.adapter;
 
+import com.pragma.plazoleta.infrastructure.client.dto.TelegramMessageRequestDto;
+import com.pragma.plazoleta.infrastructure.client.feign.TelegramFeignClient;
+import feign.FeignException;
+import feign.Request;
+import feign.RequestTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -7,12 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.*;
 class TelegramNotificationAdapterTest {
 
     @Mock
-    private RestTemplate restTemplate;
+    private TelegramFeignClient telegramFeignClient;
 
     private TelegramNotificationAdapter adapter;
 
@@ -32,7 +33,7 @@ class TelegramNotificationAdapterTest {
 
     @BeforeEach
     void setUp() {
-        adapter = new TelegramNotificationAdapter(restTemplate, botToken, defaultChatId);
+        adapter = new TelegramNotificationAdapter(telegramFeignClient, botToken, defaultChatId);
     }
 
     @Test
@@ -41,18 +42,17 @@ class TelegramNotificationAdapterTest {
         String destination = "123456789";
         String message = "Tu pedido está listo. PIN: 123456";
 
-        when(restTemplate.postForEntity(eq("https://api.telegram.org/bottest-token/sendMessage"), any(HttpEntity.class), eq(String.class)))
-                .thenReturn(ResponseEntity.ok("ok"));
+        doNothing().when(telegramFeignClient).sendMessage(eq(botToken), any(TelegramMessageRequestDto.class));
 
         adapter.sendMessage(destination, message);
 
-        ArgumentCaptor<HttpEntity<Map<String, String>>> captor = ArgumentCaptor.forClass(HttpEntity.class);
-        verify(restTemplate, times(1)).postForEntity(eq("https://api.telegram.org/bottest-token/sendMessage"), captor.capture(), eq(String.class));
+        ArgumentCaptor<TelegramMessageRequestDto> captor = ArgumentCaptor.forClass(TelegramMessageRequestDto.class);
+        verify(telegramFeignClient, times(1)).sendMessage(eq(botToken), captor.capture());
 
-        Map<String, String> body = captor.getValue().getBody();
-        assertNotNull(body);
-        assertEquals("123456789", body.get("chat_id"));
-        assertEquals(message, body.get("text"));
+        TelegramMessageRequestDto captured = captor.getValue();
+        assertNotNull(captured);
+        assertEquals("123456789", captured.getChatId());
+        assertEquals(message, captured.getText());
     }
 
     @Test
@@ -61,37 +61,39 @@ class TelegramNotificationAdapterTest {
         String destination = "+573001234567";
         String message = "Tu pedido está listo. PIN: 654321";
 
-        when(restTemplate.postForEntity(eq("https://api.telegram.org/bottest-token/sendMessage"), any(HttpEntity.class), eq(String.class)))
-                .thenReturn(ResponseEntity.ok("ok"));
+        doNothing().when(telegramFeignClient).sendMessage(eq(botToken), any(TelegramMessageRequestDto.class));
 
         adapter.sendMessage(destination, message);
 
-        ArgumentCaptor<HttpEntity<Map<String, String>>> captor = ArgumentCaptor.forClass(HttpEntity.class);
-        verify(restTemplate, times(1)).postForEntity(anyString(), captor.capture(), eq(String.class));
+        ArgumentCaptor<TelegramMessageRequestDto> captor = ArgumentCaptor.forClass(TelegramMessageRequestDto.class);
+        verify(telegramFeignClient, times(1)).sendMessage(eq(botToken), captor.capture());
 
-        Map<String, String> body = captor.getValue().getBody();
-        assertNotNull(body);
-        assertEquals(defaultChatId, body.get("chat_id"));
+        TelegramMessageRequestDto captured = captor.getValue();
+        assertNotNull(captured);
+        assertEquals(defaultChatId, captured.getChatId());
+        assertEquals(message, captured.getText());
     }
 
     @Test
     @DisplayName("Should simulate notification when botToken is null or blank")
     void shouldSimulateWhenBotTokenIsMissing() {
-        TelegramNotificationAdapter unconfiguredAdapter = new TelegramNotificationAdapter(restTemplate, null, defaultChatId);
+        TelegramNotificationAdapter unconfiguredAdapter = new TelegramNotificationAdapter(telegramFeignClient, null, defaultChatId);
         assertDoesNotThrow(() -> unconfiguredAdapter.sendMessage("123456789", "Test message"));
-        verifyNoInteractions(restTemplate);
+        verifyNoInteractions(telegramFeignClient);
 
-        TelegramNotificationAdapter blankTokenAdapter = new TelegramNotificationAdapter(restTemplate, "   ", defaultChatId);
+        TelegramNotificationAdapter blankTokenAdapter = new TelegramNotificationAdapter(telegramFeignClient, "   ", defaultChatId);
         assertDoesNotThrow(() -> blankTokenAdapter.sendMessage("123456789", "Test message"));
+        verifyNoInteractions(telegramFeignClient);
     }
 
     @Test
-    @DisplayName("Should handle RestClientException gracefully without crashing execution")
+    @DisplayName("Should handle FeignException gracefully without crashing execution")
     void shouldHandleExceptionGracefully() {
-        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(String.class)))
-                .thenThrow(new RestClientException("Telegram API timeout"));
+        Request request = Request.create(Request.HttpMethod.POST, "/sendMessage", Collections.emptyMap(), null, new RequestTemplate());
+        doThrow(new FeignException.InternalServerError("Telegram API error", request, null, null))
+                .when(telegramFeignClient).sendMessage(eq(botToken), any(TelegramMessageRequestDto.class));
 
         assertDoesNotThrow(() -> adapter.sendMessage(null, "Test error handling"));
-        verify(restTemplate, times(1)).postForEntity(anyString(), any(HttpEntity.class), eq(String.class));
+        verify(telegramFeignClient, times(1)).sendMessage(eq(botToken), any(TelegramMessageRequestDto.class));
     }
 }

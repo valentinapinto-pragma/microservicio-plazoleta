@@ -63,7 +63,6 @@ class BeanConfigurationTest {
         BeanConfiguration config = new BeanConfiguration();
 
         // Act
-        RestTemplate restTemplateBean = config.restTemplate();
         RestaurantServicePort restaurantBean = config.restaurantServicePort(restaurantPersistentPort, userInformationPort);
         RestaurantEmployeeServicePort restaurantEmployeeBean = config.restaurantEmployeeServicePort(
                 restaurantPersistentPort,
@@ -84,8 +83,6 @@ class BeanConfigurationTest {
         OpenAPI openAPIBean = config.customOpenAPI();
 
         // Assert
-        assertNotNull(restTemplateBean);
-
         assertNotNull(restaurantBean);
         assertInstanceOf(RestaurantUseCase.class, restaurantBean);
 

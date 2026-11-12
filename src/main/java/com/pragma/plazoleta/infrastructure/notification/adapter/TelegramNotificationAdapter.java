@@ -1,31 +1,26 @@
 package com.pragma.plazoleta.infrastructure.notification.adapter;
 
 import com.pragma.plazoleta.domain.repositoryPort.MessageNotificationPort;
+import com.pragma.plazoleta.infrastructure.client.dto.TelegramMessageRequestDto;
+import com.pragma.plazoleta.infrastructure.client.feign.TelegramFeignClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 @Component
 public class TelegramNotificationAdapter implements MessageNotificationPort {
 
-    private final RestTemplate restTemplate;
+    private final TelegramFeignClient telegramFeignClient;
     private final String botToken;
     private final String defaultChatId;
 
     public TelegramNotificationAdapter(
-            RestTemplate restTemplate,
+            TelegramFeignClient telegramFeignClient,
             @Value("${telegram.bot.token:}") String botToken,
             @Value("${telegram.bot.chat-id:}") String defaultChatId
     ) {
-        this.restTemplate = restTemplate;
+        this.telegramFeignClient = telegramFeignClient;
         this.botToken = botToken;
         this.defaultChatId = defaultChatId;
     }
@@ -38,18 +33,10 @@ public class TelegramNotificationAdapter implements MessageNotificationPort {
         }
 
         String targetChatId = (destination != null && destination.matches("\\d{8,12}")) ? destination : defaultChatId;
-        String url = "https://api.telegram.org/bot" + botToken + "/sendMessage";
+        TelegramMessageRequestDto requestDto = new TelegramMessageRequestDto(targetChatId, message);
 
         try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            Map<String, String> body = new HashMap<>();
-            body.put("chat_id", targetChatId);
-            body.put("text", message);
-
-            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
-            restTemplate.postForEntity(url, request, String.class);
+            telegramFeignClient.sendMessage(botToken, requestDto);
             log.info("Notificación enviada exitosamente por Telegram a chatId: {}", targetChatId);
         } catch (Exception e) {
             log.error("Error al enviar notificación por Telegram a {}: {}", targetChatId, e.getMessage());

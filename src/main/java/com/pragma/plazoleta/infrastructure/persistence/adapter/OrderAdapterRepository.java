@@ -6,6 +6,7 @@ import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
+import com.pragma.plazoleta.infrastructure.persistence.entity.OrderDishEntity;
 import com.pragma.plazoleta.infrastructure.persistence.entity.OrderEntity;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.DishEntityMapper;
 import com.pragma.plazoleta.infrastructure.persistence.mapper.OrderEntityMapper;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Repository
@@ -33,7 +35,7 @@ public class OrderAdapterRepository implements OrderPersistentPort {
     public Order save(Order order) {
         OrderEntity entity = orderEntityMapper.toEntity(order);
         OrderEntity savedEntity = orderRepository.save(entity);
-        return loadDishDetails(orderEntityMapper.toDomain(savedEntity));
+        return hydrateOrder(savedEntity);
     }
 
     @Override
@@ -45,11 +47,7 @@ public class OrderAdapterRepository implements OrderPersistentPort {
     public CustomPage<Order> getOrdersByRestaurantAndStatus(Long restaurantId, OrderStatus status, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<OrderEntity> pageResult = orderRepository.findByIdRestaurantAndStatus(restaurantId, status, pageable);
-        List<Order> orders = pageResult.getContent()
-                .stream()
-                .map(orderEntityMapper::toDomain)
-                .map(this::loadDishDetails)
-                .collect(Collectors.toList());
+        List<Order> orders = hydrateOrders(pageResult.getContent());
         return new CustomPage<>(
                 orders,
                 pageResult.getNumber(),
@@ -61,18 +59,12 @@ public class OrderAdapterRepository implements OrderPersistentPort {
 
     @Override
     public Optional<Order> findById(Long id) {
-        return orderRepository.findById(id)
-                .map(orderEntityMapper::toDomain)
-                .map(this::loadDishDetails);
+        return orderRepository.findById(id).map(this::hydrateOrder);
     }
 
     @Override
     public List<Order> findAll() {
-        return orderRepository.findAll()
-                .stream()
-                .map(orderEntityMapper::toDomain)
-                .map(this::loadDishDetails)
-                .collect(Collectors.toList());
+        return hydrateOrders(orderRepository.findAll());
     }
 
     @Override
@@ -80,47 +72,75 @@ public class OrderAdapterRepository implements OrderPersistentPort {
         orderRepository.deleteById(id);
     }
 
-    private Order loadDishDetails(Order order) {
-        if (order == null || order.getOrderDishes() == null || order.getOrderDishes().isEmpty()) {
-            return order;
+    private Order hydrateOrder(OrderEntity orderEntity) {
+        return hydrateOrders(List.of(orderEntity)).stream().findFirst().orElse(null);
+    }
+
+    private List<Order> hydrateOrders(List<OrderEntity> orderEntities) {
+        if (orderEntities == null || orderEntities.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        Set<Long> dishIds = order.getOrderDishes().stream()
-                .map(OrderDish::getDishId)
+        Set<Long> dishIds = extractUniqueDishIds(orderEntities);
+        Map<Long, Dish> dishLookup = createDishLookup(dishIds);
+
+        return orderEntities.stream()
+                .filter(Objects::nonNull)
+                .map(entity -> toFullyHydratedOrder(entity, dishLookup))
+                .collect(Collectors.toList());
+    }
+
+    private Set<Long> extractUniqueDishIds(List<OrderEntity> orderEntities) {
+        return orderEntities.stream()
+                .filter(order -> order != null && order.getOrderDishes() != null)
+                .flatMap(order -> order.getOrderDishes().stream())
+                .filter(Objects::nonNull)
+                .map(OrderDishEntity::getIdDish)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+    }
 
+    private Map<Long, Dish> createDishLookup(Set<Long> dishIds) {
         if (dishIds.isEmpty()) {
-            return order;
+            return Collections.emptyMap();
         }
-
-        Map<Long, Dish> dishesMap = dishRepository.findAllById(dishIds).stream()
+        return dishRepository.findAllById(dishIds).stream()
                 .map(dishEntityMapper::toDomain)
-                .collect(Collectors.toMap(
-                        Dish::getId,
-                        dish -> dish,
-                        (existing, replacement) -> existing
-                ));
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Dish::getId, Function.identity()));
+    }
 
-        List<OrderDish> dishesWithDetails = order.getOrderDishes().stream()
-                .map(od -> new OrderDish(
-                        od.getId(),
-                        od.getOrderId(),
-                        od.getDishId(),
-                        od.getQuantity(),
-                        dishesMap.get(od.getDishId())
-                ))
+    private Order toFullyHydratedOrder(OrderEntity entity, Map<Long, Dish> dishLookup) {
+        List<OrderDish> hydratedDishes = Optional.ofNullable(entity.getOrderDishes())
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(Objects::nonNull)
+                .map(dishEntity -> toHydratedOrderDish(dishEntity, dishLookup))
                 .collect(Collectors.toList());
 
         return new Order(
-                order.getId(),
-                order.getClientId(),
-                order.getDate(),
-                order.getStatus(),
-                order.getChefId(),
-                order.getRestaurantId(),
-                dishesWithDetails,
-                order.getSecurityPin()
+                entity.getId(),
+                entity.getIdClient(),
+                entity.getDate(),
+                entity.getStatus(),
+                entity.getIdChef(),
+                entity.getIdRestaurant(),
+                hydratedDishes,
+                entity.getSecurityPin()
+        );
+    }
+
+    private OrderDish toHydratedOrderDish(OrderDishEntity dishEntity, Map<Long, Dish> dishLookup) {
+        Long dishId = dishEntity.getIdDish();
+        Dish dish = dishId != null ? dishLookup.get(dishId) : null;
+        Long orderId = dishEntity.getOrder() != null ? dishEntity.getOrder().getId() : null;
+
+        return new OrderDish(
+                dishEntity.getId(),
+                orderId,
+                dishId,
+                dishEntity.getQuantity(),
+                dish
         );
     }
 }

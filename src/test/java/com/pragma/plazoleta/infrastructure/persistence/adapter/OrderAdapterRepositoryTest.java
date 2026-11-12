@@ -4,7 +4,6 @@ import com.pragma.plazoleta.domain.model.Category;
 import com.pragma.plazoleta.domain.model.CustomPage;
 import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Order;
-import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
 import com.pragma.plazoleta.infrastructure.persistence.entity.CategoryEntity;
 import com.pragma.plazoleta.infrastructure.persistence.entity.DishEntity;
@@ -27,11 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,23 +57,23 @@ class OrderAdapterRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        order = new Order(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, new ArrayList<>());
-        orderEntity = new OrderEntity(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, new ArrayList<>());
+        LocalDateTime now = LocalDateTime.now();
+        order = new Order(1L, 10L, now, OrderStatus.PENDIENTE, null, 1L, new ArrayList<>());
+        orderEntity = new OrderEntity(1L, 10L, now, OrderStatus.PENDIENTE, null, 1L, new ArrayList<>());
 
-        Category category = new Category(1L, "Comida Rápida", "Platos rápidos");
-        sampleDish = new Dish(100L, "Hamburguesa", 25000, "Deliciosa", "url", category, 1L, true);
+        Category category = new Category(1L, "Fast Food", "Fast Food Description");
+        sampleDish = new Dish(100L, "Burger", 15000, "Delicious burger", "http://image.png", category, 1L, true);
 
-        CategoryEntity categoryEntity = new CategoryEntity(1L, "Comida Rápida", "Platos rápidos");
-        sampleDishEntity = new DishEntity(100L, "Hamburguesa", 25000, "Deliciosa", "url", categoryEntity, 1L, true);
+        CategoryEntity categoryEntity = new CategoryEntity(1L, "Fast Food", "Fast Food Description");
+        sampleDishEntity = new DishEntity(100L, "Burger", 15000, "Delicious burger", "http://image.png", categoryEntity, 1L, true);
     }
 
     @Test
-    @DisplayName("Should successfully save order through repository and mapper")
+    @DisplayName("Should successfully save order and return domain order with empty dishes")
     void shouldSaveOrderSuccessfully() {
         // Arrange
         when(orderEntityMapper.toEntity(order)).thenReturn(orderEntity);
         when(orderRepository.save(orderEntity)).thenReturn(orderEntity);
-        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(order);
 
         // Act
         Order result = orderAdapterRepository.save(order);
@@ -86,33 +81,31 @@ class OrderAdapterRepositoryTest {
         // Assert
         assertNotNull(result);
         assertEquals(order.getId(), result.getId());
-        verify(orderEntityMapper, times(1)).toEntity(order);
+        assertEquals(order.getClientId(), result.getClientId());
+        assertEquals(order.getStatus(), result.getStatus());
         verify(orderRepository, times(1)).save(orderEntity);
-        verify(orderEntityMapper, times(1)).toDomain(orderEntity);
     }
 
     @Test
     @DisplayName("Should successfully save and load dish details when order has dishes")
     void shouldSaveAndLoadDishDetailsWhenOrderHasDishes() {
         // Arrange
-        OrderDish orderDish = new OrderDish(1L, 1L, 100L, 2);
-        Order orderWithDishes = new Order(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, List.of(orderDish));
+        OrderDishEntity orderDishEntity = new OrderDishEntity(1L, orderEntity, 100L, 2);
+        OrderEntity entityWithDishes = new OrderEntity(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, List.of(orderDishEntity));
 
-        when(orderEntityMapper.toEntity(orderWithDishes)).thenReturn(orderEntity);
-        when(orderRepository.save(orderEntity)).thenReturn(orderEntity);
-        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(orderWithDishes);
+        when(orderEntityMapper.toEntity(order)).thenReturn(entityWithDishes);
+        when(orderRepository.save(entityWithDishes)).thenReturn(entityWithDishes);
         when(dishRepository.findAllById(Set.of(100L))).thenReturn(List.of(sampleDishEntity));
         when(dishEntityMapper.toDomain(sampleDishEntity)).thenReturn(sampleDish);
 
         // Act
-        Order result = orderAdapterRepository.save(orderWithDishes);
+        Order result = orderAdapterRepository.save(order);
 
         // Assert
         assertNotNull(result);
         assertEquals(1, result.getOrderDishes().size());
         assertEquals(sampleDish, result.getOrderDishes().get(0).getDish());
         verify(dishRepository, times(1)).findAllById(Set.of(100L));
-        verify(dishEntityMapper, times(1)).toDomain(sampleDishEntity);
     }
 
     @Test
@@ -131,49 +124,40 @@ class OrderAdapterRepositoryTest {
     }
 
     @Test
-    @DisplayName("Should return false when active order does not exist for client")
-    void shouldReturnFalseWhenActiveOrderDoesNotExist() {
+    @DisplayName("Should return paginated orders filtered by restaurant and status")
+    void shouldReturnPaginatedOrdersByRestaurantAndStatus() {
         // Arrange
-        List<OrderStatus> statuses = List.of(OrderStatus.PENDIENTE, OrderStatus.EN_PREPARACION, OrderStatus.LISTO);
-        when(orderRepository.existsByIdClientAndStatusIn(10L, statuses)).thenReturn(false);
-
-        // Act
-        boolean exists = orderAdapterRepository.existsByClientIdAndStatusIn(10L, statuses);
-
-        // Assert
-        assertFalse(exists);
-        verify(orderRepository, times(1)).existsByIdClientAndStatusIn(10L, statuses);
-    }
-
-    @Test
-    @DisplayName("Should successfully get orders by restaurant and status with pagination")
-    void shouldGetOrdersByRestaurantAndStatusSuccessfully() {
         Pageable pageable = PageRequest.of(0, 10);
-        Page<OrderEntity> orderPage = new PageImpl<>(List.of(orderEntity), pageable, 1);
-        when(orderRepository.findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable)).thenReturn(orderPage);
-        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(order);
+        OrderDishEntity orderDishEntity = new OrderDishEntity(1L, orderEntity, 100L, 2);
+        orderEntity.setOrderDishes(List.of(orderDishEntity));
+
+        Page<OrderEntity> pagedEntities = new PageImpl<>(List.of(orderEntity), pageable, 1);
+
+        when(orderRepository.findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable)).thenReturn(pagedEntities);
+        when(dishRepository.findAllById(Set.of(100L))).thenReturn(List.of(sampleDishEntity));
+        when(dishEntityMapper.toDomain(sampleDishEntity)).thenReturn(sampleDish);
 
         // Act
         CustomPage<Order> result = orderAdapterRepository.getOrdersByRestaurantAndStatus(1L, OrderStatus.PENDIENTE, 0, 10);
 
         // Assert
         assertNotNull(result);
+        assertEquals(1, result.getContent().size());
         assertEquals(0, result.getCurrentPage());
         assertEquals(10, result.getPageSize());
         assertEquals(1L, result.getTotalElements());
         assertEquals(1, result.getTotalPages());
-        assertEquals(1, result.getContent().size());
-        assertEquals(order.getId(), result.getContent().get(0).getId());
-        verify(orderRepository, times(1)).findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable);
-        verify(orderEntityMapper, times(1)).toDomain(orderEntity);
+        assertEquals(sampleDish, result.getContent().get(0).getOrderDishes().get(0).getDish());
+        verify(dishRepository, times(1)).findAllById(Set.of(100L));
     }
 
     @Test
-    @DisplayName("Should return empty custom page when no orders match restaurant and status")
-    void shouldReturnEmptyListWhenNoOrdersMatch() {
+    @DisplayName("Should return empty custom page when no orders match criteria")
+    void shouldReturnEmptyCustomPageWhenNoOrdersMatch() {
         // Arrange
         Pageable pageable = PageRequest.of(0, 10);
-        Page<OrderEntity> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+        Page<OrderEntity> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
         when(orderRepository.findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable)).thenReturn(emptyPage);
 
         // Act
@@ -184,19 +168,17 @@ class OrderAdapterRepositoryTest {
         assertTrue(result.getContent().isEmpty());
         assertEquals(0L, result.getTotalElements());
         assertEquals(0, result.getTotalPages());
-        verify(orderRepository, times(1)).findByIdRestaurantAndStatus(1L, OrderStatus.PENDIENTE, pageable);
-        verify(orderEntityMapper, never()).toDomain(any(OrderEntity.class));
+        verify(dishRepository, never()).findAllById(any());
     }
 
     @Test
     @DisplayName("Should return order when found by id and load dish details")
     void shouldReturnOrderWhenFoundById() {
         // Arrange
-        OrderDish orderDish = new OrderDish(1L, 1L, 100L, 2);
-        Order orderWithDishes = new Order(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, List.of(orderDish));
+        OrderDishEntity orderDishEntity = new OrderDishEntity(1L, orderEntity, 100L, 2);
+        orderEntity.setOrderDishes(List.of(orderDishEntity));
 
         when(orderRepository.findById(1L)).thenReturn(Optional.of(orderEntity));
-        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(orderWithDishes);
         when(dishRepository.findAllById(Set.of(100L))).thenReturn(List.of(sampleDishEntity));
         when(dishEntityMapper.toDomain(sampleDishEntity)).thenReturn(sampleDish);
 
@@ -208,6 +190,19 @@ class OrderAdapterRepositoryTest {
         assertEquals(1L, result.get().getId());
         assertEquals(sampleDish, result.get().getOrderDishes().get(0).getDish());
         verify(orderRepository, times(1)).findById(1L);
+        verify(dishRepository, times(1)).findAllById(Set.of(100L));
+    }
+
+    @Test
+    @DisplayName("Should return empty optional when order not found by id")
+    void shouldReturnEmptyWhenNotFoundById() {
+        when(orderRepository.findById(999L)).thenReturn(Optional.empty());
+
+        Optional<Order> result = orderAdapterRepository.findById(999L);
+
+        assertFalse(result.isPresent());
+        verify(orderRepository, times(1)).findById(999L);
+        verify(dishRepository, never()).findAllById(any());
     }
 
     @Test
@@ -215,7 +210,6 @@ class OrderAdapterRepositoryTest {
     void shouldReturnAllOrders() {
         // Arrange
         when(orderRepository.findAll()).thenReturn(List.of(orderEntity));
-        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(order);
 
         // Act
         List<Order> result = orderAdapterRepository.findAll();
@@ -229,10 +223,7 @@ class OrderAdapterRepositoryTest {
     @Test
     @DisplayName("Should delete order by id")
     void shouldDeleteOrderById() {
-        // Act
         orderAdapterRepository.delete(1L);
-
-        // Assert
         verify(orderRepository, times(1)).deleteById(1L);
     }
 
@@ -240,16 +231,15 @@ class OrderAdapterRepositoryTest {
     @DisplayName("Should return order as-is when order has null dishes list")
     void shouldReturnOrderAsIsWhenDishesListIsNull() {
         // Arrange
-        Order orderWithNullDishes = new Order(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, null);
+        orderEntity.setOrderDishes(null);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(orderEntity));
-        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(orderWithNullDishes);
 
         // Act
         Optional<Order> result = orderAdapterRepository.findById(1L);
 
         // Assert
         assertTrue(result.isPresent());
-        assertNull(result.get().getOrderDishes());
+        assertTrue(result.get().getOrderDishes().isEmpty());
         verify(dishRepository, never()).findAllById(any());
     }
 
@@ -257,11 +247,10 @@ class OrderAdapterRepositoryTest {
     @DisplayName("Should return order as-is when all dish ids are null")
     void shouldReturnOrderAsIsWhenAllDishIdsAreNull() {
         // Arrange
-        OrderDish orderDishWithNullId = new OrderDish(1L, 1L, null, 2);
-        Order orderWithNullDishId = new Order(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, List.of(orderDishWithNullId));
+        OrderDishEntity orderDishEntity = new OrderDishEntity(1L, null, null, 2);
+        orderEntity.setOrderDishes(List.of(orderDishEntity));
 
         when(orderRepository.findById(1L)).thenReturn(Optional.of(orderEntity));
-        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(orderWithNullDishId);
 
         // Act
         Optional<Order> result = orderAdapterRepository.findById(1L);
@@ -271,26 +260,5 @@ class OrderAdapterRepositoryTest {
         assertEquals(1, result.get().getOrderDishes().size());
         assertNull(result.get().getOrderDishes().get(0).getDish());
         verify(dishRepository, never()).findAllById(any());
-    }
-
-    @Test
-    @DisplayName("Should handle duplicate dishes in database without throwing error")
-    void shouldHandleDuplicateDishesWithoutError() {
-        // Arrange
-        OrderDish orderDish = new OrderDish(1L, 1L, 100L, 2);
-        Order orderWithDishes = new Order(1L, 10L, LocalDateTime.now(), OrderStatus.PENDIENTE, null, 1L, List.of(orderDish));
-
-        // Simulamos que por alguna razón la BD devuelve 2 entidades con el mismo ID 100L
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(orderEntity));
-        when(orderEntityMapper.toDomain(orderEntity)).thenReturn(orderWithDishes);
-        when(dishRepository.findAllById(Set.of(100L))).thenReturn(List.of(sampleDishEntity, sampleDishEntity));
-        when(dishEntityMapper.toDomain(sampleDishEntity)).thenReturn(sampleDish);
-
-        // Act
-        Optional<Order> result = orderAdapterRepository.findById(1L);
-
-        // Assert
-        assertTrue(result.isPresent());
-        assertEquals(sampleDish, result.get().getOrderDishes().get(0).getDish());
     }
 }

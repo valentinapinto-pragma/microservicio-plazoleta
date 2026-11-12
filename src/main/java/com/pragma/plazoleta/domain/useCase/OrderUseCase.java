@@ -38,6 +38,10 @@ public class OrderUseCase implements OrderServicePort {
     public static final int MIN_SIZE_REQUIRED = 0;
     private static final String EMPLOYEE_NOT_ASSIGNED_MESSAGE = "The employee is not assigned to any restaurant";
 
+    private static final int PIN_LENGTH = 6;
+    private static final int PIN_UPPER_BOUND = 1_000_000; // 10^PIN_LENGTH
+    private static final String PIN_FORMAT = "%0" + PIN_LENGTH + "d";
+
     private final OrderPersistentPort orderPersistentPort;
     private final DishPersistentPort dishPersistentPort;
     private final RestaurantPersistentPort restaurantPersistentPort;
@@ -152,8 +156,8 @@ public class OrderUseCase implements OrderServicePort {
     }
 
     private String generateSecurityPin() {
-        int pinNumber = SECURE_RANDOM.nextInt(1_000_000);
-        return String.format("%06d", pinNumber);
+        int pinNumber = SECURE_RANDOM.nextInt(PIN_UPPER_BOUND);
+        return String.format(PIN_FORMAT, pinNumber);
     }
 
     private void validateOrderIsInPreparationStatus(Order order) {

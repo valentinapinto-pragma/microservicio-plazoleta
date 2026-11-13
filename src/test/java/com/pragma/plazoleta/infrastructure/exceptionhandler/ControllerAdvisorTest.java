@@ -249,4 +249,30 @@ class ControllerAdvisorTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("Invalid security PIN", body.getMessage());
     }
+
+    @Test
+    @DisplayName("Should handle OrderCannotBeCancelledException and return 400 Bad Request")
+    void shouldHandleOrderCannotBeCancelledException() {
+        OrderCannotBeCancelledException ex = new OrderCannotBeCancelledException("Lo sentimos, tu pedido ya está en preparación y no puede cancelarse");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleOrderCannotBeCancelledException(ex);
+
+        assertNotNull(response);
+        ErrorResponseDto body = response.getBody();
+        assertNotNull(body);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Lo sentimos, tu pedido ya está en preparación y no puede cancelarse", body.getMessage());
+    }
+
+    @Test
+    @DisplayName("Should handle OrderDoesNotBelongToClientException and return 403 Forbidden")
+    void shouldHandleOrderDoesNotBelongToClientException() {
+        OrderDoesNotBelongToClientException ex = new OrderDoesNotBelongToClientException("The order does not belong to the authenticated client");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleOrderDoesNotBelongToClientException(ex);
+
+        assertNotNull(response);
+        ErrorResponseDto body = response.getBody();
+        assertNotNull(body);
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertEquals("The order does not belong to the authenticated client", body.getMessage());
+    }
 }

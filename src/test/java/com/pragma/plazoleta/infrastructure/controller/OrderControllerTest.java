@@ -447,4 +447,79 @@ class OrderControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Invalid security PIN for order id: 1"));
     }
+
+    // TESTS: PATCH /orders/{id}/cancel (HU-16)
+
+    @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 200 OK when client cancels order successfully")
+    void shouldReturnOkWhenClientCancelsOrder() throws Exception {
+        Long orderId = 1L;
+        OrderResponseDto responseDto = new OrderResponseDto(
+                orderId, 10L, LocalDateTime.now(), OrderStatus.CANCELADO, null, 1L, List.of()
+        );
+
+        when(orderHandler.cancelOrder(orderId)).thenReturn(responseDto);
+
+        mockMvc.perform(patch("/orders/{id}/cancel", orderId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId))
+                .andExpect(jsonPath("$.status").value("CANCELADO"));
+
+        verify(orderHandler, times(1)).cancelOrder(orderId);
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    @DisplayName("Should return 403 Forbidden when employee tries to cancel order")
+    void shouldReturnForbiddenWhenEmployeeCancelsOrder() throws Exception {
+        mockMvc.perform(patch("/orders/1/cancel")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+
+        verify(orderHandler, never()).cancelOrder(anyLong());
+    }
+
+    @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 403 Forbidden when order does not belong to client")
+    void shouldReturnForbiddenWhenOrderDoesNotBelongToClientOnCancel() throws Exception {
+        Long orderId = 1L;
+        doThrow(new OrderDoesNotBelongToClientException("The order does not belong to the authenticated client"))
+                .when(orderHandler).cancelOrder(orderId);
+
+        mockMvc.perform(patch("/orders/{id}/cancel", orderId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("The order does not belong to the authenticated client"));
+    }
+
+    @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 400 Bad Request when order cannot be cancelled because it is not in PENDIENTE status")
+    void shouldReturnBadRequestWhenOrderCannotBeCancelled() throws Exception {
+        Long orderId = 1L;
+        doThrow(new OrderCannotBeCancelledException("Lo sentimos, tu pedido ya está en preparación y no puede cancelarse"))
+                .when(orderHandler).cancelOrder(orderId);
+
+        mockMvc.perform(patch("/orders/{id}/cancel", orderId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Lo sentimos, tu pedido ya está en preparación y no puede cancelarse"));
+    }
+
+    @Test
+    @WithMockUser(roles = "CLIENT")
+    @DisplayName("Should return 404 Not Found when order does not exist on cancel")
+    void shouldReturnNotFoundWhenOrderNotFoundOnCancel() throws Exception {
+        Long orderId = 999L;
+        doThrow(new OrderNotFoundException("Order not found with id: 999"))
+                .when(orderHandler).cancelOrder(orderId);
+
+        mockMvc.perform(patch("/orders/{id}/cancel", orderId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Order not found with id: 999"));
+    }
 }

@@ -130,4 +130,16 @@ public class ControllerAdvisor {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponseDto(ex.getMessage()));
     }
+
+    @ExceptionHandler(OrderCannotBeCancelledException.class)
+    public ResponseEntity<ErrorResponseDto> handleOrderCannotBeCancelledException(OrderCannotBeCancelledException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(OrderDoesNotBelongToClientException.class)
+    public ResponseEntity<ErrorResponseDto> handleOrderDoesNotBelongToClientException(OrderDoesNotBelongToClientException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
 }

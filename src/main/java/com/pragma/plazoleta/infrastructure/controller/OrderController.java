@@ -109,4 +109,19 @@ public class OrderController {
         OrderResponseDto updatedOrder = orderHandler.deliverOrder(id, orderDeliveryRequestDto);
         return ResponseEntity.ok(updatedOrder);
     }
+
+    @Operation(summary = "Cancel an order",
+            description = "Allows an authenticated client to cancel their own order only if it is in PENDIENTE status")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order cancelled successfully"),
+            @ApiResponse(responseCode = "400", description = "Order is not in PENDIENTE status and cannot be cancelled", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Forbidden: User is not authorized or order does not belong to client", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content)
+    })
+    @PatchMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('CLIENT')")
+    public ResponseEntity<OrderResponseDto> cancelOrder(@PathVariable Long id) {
+        OrderResponseDto updatedOrder = orderHandler.cancelOrder(id);
+        return ResponseEntity.ok(updatedOrder);
+    }
 }

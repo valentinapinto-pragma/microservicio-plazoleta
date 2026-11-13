@@ -53,4 +53,9 @@ public class OrderHandler {
         Order updatedOrder = orderServicePort.deliverOrder(id, orderDeliveryRequestDto.getSecurityPin());
         return orderDtoMapper.toResponseDto(updatedOrder);
     }
+
+    public OrderResponseDto cancelOrder(Long id) {
+        Order updatedOrder = orderServicePort.cancelOrder(id);
+        return orderDtoMapper.toResponseDto(updatedOrder);
+    }
 }

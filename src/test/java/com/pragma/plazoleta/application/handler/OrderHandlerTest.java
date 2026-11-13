@@ -151,4 +151,24 @@ class OrderHandlerTest {
         verify(orderServicePort, times(1)).deliverOrder(orderId, pin);
         verify(orderDtoMapper, times(1)).toResponseDto(deliveredOrder);
     }
+
+    @Test
+    @DisplayName("Should cancel order through service port and map to response DTO")
+    void shouldCancelOrderSuccessfully() {
+        Long orderId = 100L;
+        Order cancelledOrder = new Order(orderId, 10L, null, OrderStatus.CANCELADO, null, 1L, List.of());
+        OrderResponseDto responseDto = new OrderResponseDto(orderId, 10L, null, OrderStatus.CANCELADO, null, 1L, List.of());
+
+        when(orderServicePort.cancelOrder(orderId)).thenReturn(cancelledOrder);
+        when(orderDtoMapper.toResponseDto(cancelledOrder)).thenReturn(responseDto);
+
+        // Act
+        OrderResponseDto result = orderHandler.cancelOrder(orderId);
+
+        assertNotNull(result);
+        assertEquals(orderId, result.getId());
+        assertEquals(OrderStatus.CANCELADO, result.getStatus());
+        verify(orderServicePort, times(1)).cancelOrder(orderId);
+        verify(orderDtoMapper, times(1)).toResponseDto(cancelledOrder);
+    }
 }

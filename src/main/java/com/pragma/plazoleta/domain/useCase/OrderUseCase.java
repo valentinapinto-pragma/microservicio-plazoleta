@@ -8,6 +8,8 @@ import com.pragma.plazoleta.domain.exception.EmployeeNotAssignedToRestaurantExce
 import com.pragma.plazoleta.domain.exception.InvalidOrderDataException;
 import com.pragma.plazoleta.domain.exception.InvalidOrderStatusException;
 import com.pragma.plazoleta.domain.exception.InvalidSecurityPinException;
+import com.pragma.plazoleta.domain.exception.OrderCannotBeCancelledException;
+import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToClientException;
 import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.OrderNotFoundException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
@@ -38,6 +40,8 @@ public class OrderUseCase implements OrderServicePort {
     public static final int MIN_PAGE_NUMBER = 0;
     public static final int MIN_SIZE_REQUIRED = 0;
     private static final String EMPLOYEE_NOT_ASSIGNED_MESSAGE = "The employee is not assigned to any restaurant";
+    private static final String ORDER_NOT_FOUND_MESSAGE = "Order not found with id: ";
+    private static final String ORDER_CANNOT_BE_CANCELLED_MESSAGE = "Lo sentimos, tu pedido ya está en preparación y no puede cancelarse";
 
     private static final int PIN_LENGTH = 6;
     private static final int PIN_UPPER_BOUND = 1_000_000; // 10^PIN_LENGTH
@@ -112,8 +116,7 @@ public class OrderUseCase implements OrderServicePort {
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException(EMPLOYEE_NOT_ASSIGNED_MESSAGE));
 
-        Order order = orderPersistentPort.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
+        Order order = getOrderOrThrow(orderId);
 
         validateOrderBelongsToRestaurant(order, employee.getRestaurantId());
         validateOrderIsInPendingStatus(order);
@@ -134,8 +137,7 @@ public class OrderUseCase implements OrderServicePort {
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException(EMPLOYEE_NOT_ASSIGNED_MESSAGE));
 
-        Order order = orderPersistentPort.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
+        Order order = getOrderOrThrow(orderId);
 
         validateOrderBelongsToRestaurant(order, employee.getRestaurantId());
         validateOrderIsInPreparationStatus(order);
@@ -162,8 +164,7 @@ public class OrderUseCase implements OrderServicePort {
         RestaurantEmployee employee = restaurantEmployeePersistentPort.findByEmployeeId(employeeId)
                 .orElseThrow(() -> new EmployeeNotAssignedToRestaurantException(EMPLOYEE_NOT_ASSIGNED_MESSAGE));
 
-        Order order = orderPersistentPort.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
+        Order order = getOrderOrThrow(orderId);
 
         validateOrderBelongsToRestaurant(order, employee.getRestaurantId());
         validateOrderIsInReadyStatus(order);
@@ -172,6 +173,40 @@ public class OrderUseCase implements OrderServicePort {
         order.setStatus(OrderStatus.ENTREGADO);
 
         return orderPersistentPort.save(order);
+    }
+
+    @Override
+    public Order cancelOrder(Long orderId) {
+        validateOrderIdNotNull(orderId);
+
+        Long clientId = userInformationPort.getAuthenticatedUserId();
+        validateClientId(clientId);
+
+        Order order = getOrderOrThrow(orderId);
+
+        validateOrderBelongsToClient(order, clientId);
+        validateOrderIsInPendingStatusForCancellation(order);
+
+        order.setStatus(OrderStatus.CANCELADO);
+
+        return orderPersistentPort.save(order);
+    }
+
+    private Order getOrderOrThrow(Long orderId) {
+        return orderPersistentPort.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(ORDER_NOT_FOUND_MESSAGE + orderId));
+    }
+
+    private void validateOrderBelongsToClient(Order order, Long clientId) {
+        if (!order.getClientId().equals(clientId)) {
+            throw new OrderDoesNotBelongToClientException("The order does not belong to the authenticated client");
+        }
+    }
+
+    private void validateOrderIsInPendingStatusForCancellation(Order order) {
+        if (order.getStatus() != OrderStatus.PENDIENTE) {
+            throw new OrderCannotBeCancelledException(ORDER_CANNOT_BE_CANCELLED_MESSAGE);
+        }
     }
 
     private void notifyClientOrderReady(Order order, String securityPin) {

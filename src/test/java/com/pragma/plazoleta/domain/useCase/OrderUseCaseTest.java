@@ -74,7 +74,10 @@ class OrderUseCaseTest {
         lenient().when(userInformationPort.getAuthenticatedUserId()).thenReturn(10L);
     }
 
+    // ==========================================
     // TESTS: HU-11 - createOrder
+    // ==========================================
+
     @Test
     @DisplayName("Should successfully create order when all data and business rules are valid")
     void shouldCreateOrderSuccessfully() {
@@ -194,7 +197,7 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when dish does not belong to the restaurant")
     void shouldThrowExceptionWhenDishDoesNotBelongToRestaurant() {
-        validDish1.setIdRestaurant(99L); // Restaurante ajeno
+        validDish1.setIdRestaurant(99L);
 
         when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
         when(orderPersistentPort.existsByClientIdAndStatusIn(eq(10L), anyList())).thenReturn(false);
@@ -211,7 +214,7 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when dish is inactive")
     void shouldThrowExceptionWhenDishIsInactive() {
-        validDish1.setActive(false); // Plato deshabilitado
+        validDish1.setActive(false);
 
         when(restaurantPersistentPort.existsById(1L)).thenReturn(true);
         when(orderPersistentPort.existsByClientIdAndStatusIn(eq(10L), anyList())).thenReturn(false);
@@ -270,7 +273,9 @@ class OrderUseCaseTest {
         verify(orderPersistentPort, never()).save(any());
     }
 
+    // ==========================================
     // TESTS: HU-12 - getOrdersByStatus
+    // ==========================================
 
     @Test
     @DisplayName("Should successfully get orders by status when employee belongs to restaurant")
@@ -371,7 +376,9 @@ class OrderUseCaseTest {
         CustomPage<Order> emptyPage = new CustomPage<>(Collections.emptyList(), 0, 10, 0L, 0);
         when(orderPersistentPort.getOrdersByRestaurantAndStatus(restaurantId, OrderStatus.PENDIENTE, 0, 10))
                 .thenReturn(emptyPage);
+
         CustomPage<Order> result = orderUseCase.getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
+
         assertNotNull(result);
         assertTrue(result.getContent().isEmpty());
         assertEquals(0L, result.getTotalElements());
@@ -380,9 +387,9 @@ class OrderUseCaseTest {
         verify(dishPersistentPort, never()).findById(any());
     }
 
+    // ==========================================
     // TESTS: HU-13 - assignOrder
-
-    // TESTS: HU-13 - assignOrder
+    // ==========================================
 
     @Test
     @DisplayName("Should successfully assign order to authenticated employee and change status to EN_PREPARACION")
@@ -450,9 +457,8 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when order does not exist on assign")
     void shouldThrowWhenOrderNotFoundOnAssign() {
-        RestaurantEmployee employee = new RestaurantEmployee(1L, 1L, 3L);
         when(userInformationPort.getAuthenticatedUserId()).thenReturn(3L);
-        when(restaurantEmployeePersistentPort.findByEmployeeId(3L)).thenReturn(Optional.of(employee));
+        when(restaurantEmployeePersistentPort.findByEmployeeId(3L)).thenReturn(Optional.of(new RestaurantEmployee(1L, 1L, 3L)));
         when(orderPersistentPort.findById(999L)).thenReturn(Optional.empty());
 
         OrderNotFoundException exception = assertThrows(
@@ -499,7 +505,9 @@ class OrderUseCaseTest {
         verify(orderPersistentPort, never()).save(any());
     }
 
+    // ==========================================
     // TESTS: HU-14 - updateOrderToReady
+    // ==========================================
 
     @Test
     @DisplayName("Should successfully update order to ready, generate PIN, and notify client")
@@ -574,9 +582,8 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw exception when order is not found on updateOrderToReady")
     void shouldThrowWhenOrderNotFoundOnUpdateToReady() {
-        RestaurantEmployee employee = new RestaurantEmployee(1L, 1L, 3L);
         when(userInformationPort.getAuthenticatedUserId()).thenReturn(3L);
-        when(restaurantEmployeePersistentPort.findByEmployeeId(3L)).thenReturn(Optional.of(employee));
+        when(restaurantEmployeePersistentPort.findByEmployeeId(3L)).thenReturn(Optional.of(new RestaurantEmployee(1L, 1L, 3L)));
         when(orderPersistentPort.findById(100L)).thenReturn(Optional.empty());
 
         OrderNotFoundException exception = assertThrows(
@@ -623,12 +630,13 @@ class OrderUseCaseTest {
         verify(orderPersistentPort, never()).save(any());
     }
 
-    // HU-15: deliverOrder Tests
+    // ==========================================
+    // TESTS: HU-15 - deliverOrder
+    // ==========================================
 
     @Test
     @DisplayName("Should deliver order successfully when status is LISTO and PIN matches")
     void shouldDeliverOrderSuccessfully() {
-        // Arrange
         Long orderId = 1L;
         String pin = "123456";
         Long employeeId = 5L;
@@ -646,10 +654,8 @@ class OrderUseCaseTest {
         when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(order));
         when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // Act
         Order deliveredOrder = orderUseCase.deliverOrder(orderId, pin);
 
-        // Assert
         assertNotNull(deliveredOrder);
         assertEquals(OrderStatus.ENTREGADO, deliveredOrder.getStatus());
         verify(orderPersistentPort, times(1)).save(order);
@@ -687,9 +693,8 @@ class OrderUseCaseTest {
     @Test
     @DisplayName("Should throw OrderNotFoundException when order does not exist on deliver")
     void shouldThrowWhenOrderNotFoundOnDeliver() {
-        RestaurantEmployee employee = new RestaurantEmployee(1L, 10L, 5L);
         when(userInformationPort.getAuthenticatedUserId()).thenReturn(5L);
-        when(restaurantEmployeePersistentPort.findByEmployeeId(5L)).thenReturn(Optional.of(employee));
+        when(restaurantEmployeePersistentPort.findByEmployeeId(5L)).thenReturn(Optional.of(new RestaurantEmployee(1L, 10L, 5L)));
         when(orderPersistentPort.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(OrderNotFoundException.class, () -> orderUseCase.deliverOrder(1L, "123456"));
@@ -741,5 +746,120 @@ class OrderUseCaseTest {
         when(orderPersistentPort.findById(1L)).thenReturn(Optional.of(order));
 
         assertThrows(InvalidSecurityPinException.class, () -> orderUseCase.deliverOrder(1L, "999999"));
+    }
+
+    // ==========================================
+    // TESTS: HU-16 - cancelOrder
+    // ==========================================
+
+    @Test
+    @DisplayName("Should cancel order successfully when order is in PENDIENTE status")
+    void shouldCancelOrderSuccessfully() {
+        Long orderId = 1L;
+        Long clientId = 10L;
+        Order pendingOrder = new Order();
+        pendingOrder.setId(orderId);
+        pendingOrder.setClientId(clientId);
+        pendingOrder.setStatus(OrderStatus.PENDIENTE);
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(clientId);
+        when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(pendingOrder));
+        when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Order result = orderUseCase.cancelOrder(orderId);
+
+        assertNotNull(result);
+        assertEquals(OrderStatus.CANCELADO, result.getStatus());
+        verify(orderPersistentPort).save(pendingOrder);
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidOrderDataException when orderId is null on cancelOrder")
+    void shouldThrowInvalidOrderDataExceptionWhenOrderIdIsNullOnCancelOrder() {
+        InvalidOrderDataException exception = assertThrows(
+                InvalidOrderDataException.class,
+                () -> orderUseCase.cancelOrder(null)
+        );
+
+        assertEquals("Order id cannot be null", exception.getMessage());
+        verify(orderPersistentPort, never()).findById(anyLong());
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidOrderDataException when authenticated clientId is null on cancelOrder")
+    void shouldThrowInvalidOrderDataExceptionWhenClientIdIsNullOnCancelOrder() {
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(null);
+
+        InvalidOrderDataException exception = assertThrows(
+                InvalidOrderDataException.class,
+                () -> orderUseCase.cancelOrder(1L)
+        );
+
+        assertEquals("Client id cannot be null", exception.getMessage());
+        verify(orderPersistentPort, never()).findById(anyLong());
+    }
+
+    @Test
+    @DisplayName("Should throw OrderNotFoundException when order does not exist on cancelOrder")
+    void shouldThrowOrderNotFoundExceptionWhenOrderDoesNotExistOnCancelOrder() {
+        Long orderId = 99L;
+        Long clientId = 10L;
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(clientId);
+        when(orderPersistentPort.findById(orderId)).thenReturn(Optional.empty());
+
+        OrderNotFoundException exception = assertThrows(
+                OrderNotFoundException.class,
+                () -> orderUseCase.cancelOrder(orderId)
+        );
+
+        assertEquals("Order not found with id: " + orderId, exception.getMessage());
+        verify(orderPersistentPort, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("Should throw OrderDoesNotBelongToClientException when order belongs to another client")
+    void shouldThrowOrderDoesNotBelongToClientExceptionWhenOrderBelongsToAnotherClient() {
+        Long orderId = 1L;
+        Long authenticatedClientId = 10L;
+        Long orderOwnerClientId = 20L;
+
+        Order order = new Order();
+        order.setId(orderId);
+        order.setClientId(orderOwnerClientId);
+        order.setStatus(OrderStatus.PENDIENTE);
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(authenticatedClientId);
+        when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(order));
+
+        OrderDoesNotBelongToClientException exception = assertThrows(
+                OrderDoesNotBelongToClientException.class,
+                () -> orderUseCase.cancelOrder(orderId)
+        );
+
+        assertEquals("The order does not belong to the authenticated client", exception.getMessage());
+        verify(orderPersistentPort, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("Should throw OrderCannotBeCancelledException when order is not in PENDIENTE status")
+    void shouldThrowOrderCannotBeCancelledExceptionWhenOrderStatusIsNotPending() {
+        Long orderId = 1L;
+        Long clientId = 10L;
+
+        Order inPrepOrder = new Order();
+        inPrepOrder.setId(orderId);
+        inPrepOrder.setClientId(clientId);
+        inPrepOrder.setStatus(OrderStatus.EN_PREPARACION);
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(clientId);
+        when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(inPrepOrder));
+
+        OrderCannotBeCancelledException exception = assertThrows(
+                OrderCannotBeCancelledException.class,
+                () -> orderUseCase.cancelOrder(orderId)
+        );
+
+        assertEquals("Lo sentimos, tu pedido ya está en preparación y no puede cancelarse", exception.getMessage());
+        verify(orderPersistentPort, never()).save(any(Order.class));
     }
 }

@@ -10,4 +10,5 @@ public interface OrderServicePort {
     Order assignOrder(Long orderId);
     Order updateOrderToReady(Long orderId);
     Order deliverOrder(Long orderId, String securityPin);
+    Order cancelOrder(Long orderId);
 }

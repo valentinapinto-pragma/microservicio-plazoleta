@@ -37,29 +37,10 @@ class TelegramNotificationAdapterTest {
     }
 
     @Test
-    @DisplayName("Should send message using destination chatId when destination is valid chatId format")
-    void shouldSendMessageWithDestinationChatId() {
-        String destination = "123456789";
-        String message = "Tu pedido está listo. PIN: 123456";
-
-        doNothing().when(telegramFeignClient).sendMessage(eq(botToken), any(TelegramMessageRequestDto.class));
-
-        adapter.sendMessage(destination, message);
-
-        ArgumentCaptor<TelegramMessageRequestDto> captor = ArgumentCaptor.forClass(TelegramMessageRequestDto.class);
-        verify(telegramFeignClient, times(1)).sendMessage(eq(botToken), captor.capture());
-
-        TelegramMessageRequestDto captured = captor.getValue();
-        assertNotNull(captured);
-        assertEquals("123456789", captured.getChatId());
-        assertEquals(message, captured.getText());
-    }
-
-    @Test
-    @DisplayName("Should send message using defaultChatId when destination is not a direct telegram chatId")
-    void shouldSendMessageWithDefaultChatIdWhenDestinationIsPhoneOrNull() {
+    @DisplayName("Should send message using defaultChatId configured for Telegram bot")
+    void shouldSendMessageUsingDefaultChatId() {
         String destination = "+573001234567";
-        String message = "Tu pedido está listo. PIN: 654321";
+        String message = "Tu pedido está listo. PIN: 123456";
 
         doNothing().when(telegramFeignClient).sendMessage(eq(botToken), any(TelegramMessageRequestDto.class));
 
@@ -78,11 +59,11 @@ class TelegramNotificationAdapterTest {
     @DisplayName("Should simulate notification when botToken is null or blank")
     void shouldSimulateWhenBotTokenIsMissing() {
         TelegramNotificationAdapter unconfiguredAdapter = new TelegramNotificationAdapter(telegramFeignClient, null, defaultChatId);
-        assertDoesNotThrow(() -> unconfiguredAdapter.sendMessage("123456789", "Test message"));
+        assertDoesNotThrow(() -> unconfiguredAdapter.sendMessage("+573001234567", "Test message"));
         verifyNoInteractions(telegramFeignClient);
 
         TelegramNotificationAdapter blankTokenAdapter = new TelegramNotificationAdapter(telegramFeignClient, "   ", defaultChatId);
-        assertDoesNotThrow(() -> blankTokenAdapter.sendMessage("123456789", "Test message"));
+        assertDoesNotThrow(() -> blankTokenAdapter.sendMessage("+573001234567", "Test message"));
         verifyNoInteractions(telegramFeignClient);
     }
 
@@ -93,7 +74,7 @@ class TelegramNotificationAdapterTest {
         doThrow(new FeignException.InternalServerError("Telegram API error", request, null, null))
                 .when(telegramFeignClient).sendMessage(eq(botToken), any(TelegramMessageRequestDto.class));
 
-        assertDoesNotThrow(() -> adapter.sendMessage(null, "Test error handling"));
+        assertDoesNotThrow(() -> adapter.sendMessage("+573001234567", "Test error handling"));
         verify(telegramFeignClient, times(1)).sendMessage(eq(botToken), any(TelegramMessageRequestDto.class));
     }
 }

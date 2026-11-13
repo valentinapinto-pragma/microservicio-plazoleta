@@ -32,14 +32,13 @@ public class TelegramNotificationAdapter implements MessageNotificationPort {
             return;
         }
 
-        String targetChatId = (destination != null && destination.matches("\\d{8,12}")) ? destination : defaultChatId;
-        TelegramMessageRequestDto requestDto = new TelegramMessageRequestDto(targetChatId, message);
+        TelegramMessageRequestDto requestDto = new TelegramMessageRequestDto(defaultChatId, message);
 
         try {
             telegramFeignClient.sendMessage(botToken, requestDto);
-            log.info("Notificación enviada exitosamente por Telegram a chatId: {}", targetChatId);
+            log.info("Notificación enviada exitosamente por Telegram a chatId: {} (destinatario original: {})", defaultChatId, destination);
         } catch (Exception e) {
-            log.error("Error al enviar notificación por Telegram a {}: {}", targetChatId, e.getMessage());
+            log.error("Error al enviar notificación por Telegram a {}: {}", defaultChatId, e.getMessage());
         }
     }
 }

@@ -75,6 +75,19 @@ public class UserInformationAdapter implements UserInformationPort {
         }
     }
 
+    @Override
+    public String getUserEmail(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        try {
+            UserResponseDto user = userFeignClient.getUserById(userId);
+            return user != null ? user.getEmail() : null;
+        } catch (FeignException.NotFound e) {
+            return null;
+        }
+    }
+
     private boolean isOwnerRole(UserResponseDto user) {
         if (user == null) {
             return false;

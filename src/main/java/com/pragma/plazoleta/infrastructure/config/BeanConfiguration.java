@@ -7,6 +7,7 @@ import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.MessageNotificationPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.OrderTraceabilityPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
@@ -23,11 +24,9 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class BeanConfiguration {
-
 
     @Bean
     public RestaurantServicePort restaurantServicePort(RestaurantPersistentPort restaurantPersistentPort,
@@ -61,8 +60,17 @@ public class BeanConfiguration {
                                              RestaurantPersistentPort restaurantPersistentPort,
                                              RestaurantEmployeePersistentPort restaurantEmployeePersistentPort,
                                              UserInformationPort userInformationPort,
-                                             MessageNotificationPort messageNotificationPort) {
-        return new OrderUseCase(orderPersistentPort, dishPersistentPort, restaurantPersistentPort, restaurantEmployeePersistentPort, userInformationPort, messageNotificationPort);
+                                             MessageNotificationPort messageNotificationPort,
+                                             OrderTraceabilityPort orderTraceabilityPort) {
+        return new OrderUseCase(
+                orderPersistentPort,
+                dishPersistentPort,
+                restaurantPersistentPort,
+                restaurantEmployeePersistentPort,
+                userInformationPort,
+                messageNotificationPort,
+                orderTraceabilityPort
+        );
     }
 
     @Bean

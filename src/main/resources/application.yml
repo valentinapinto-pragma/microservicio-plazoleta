@@ -28,3 +28,5 @@ services:
     url: ${USERS_SERVICE_URL:http://localhost:8081/users}
   messaging:
     url: ${MESSAGING_SERVICE_URL:http://localhost:8084/messages}
+  traceability:
+    url: ${TRACEABILITY_SERVICE_URL:http://localhost:8083/traceability}

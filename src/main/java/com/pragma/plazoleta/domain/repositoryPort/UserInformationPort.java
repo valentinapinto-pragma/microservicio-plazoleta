@@ -5,4 +5,5 @@ public interface UserInformationPort {
     Long getAuthenticatedUserId();
     String getClientPhoneNumber(Long clientId);
     boolean isValidEmployee(Long employeeId);
+    String getUserEmail(Long userId);
 }

@@ -18,10 +18,12 @@ import com.pragma.plazoleta.domain.model.Dish;
 import com.pragma.plazoleta.domain.model.Order;
 import com.pragma.plazoleta.domain.model.OrderDish;
 import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.OrderTraceLog;
 import com.pragma.plazoleta.domain.model.RestaurantEmployee;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.MessageNotificationPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.OrderTraceabilityPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
@@ -54,19 +56,22 @@ public class OrderUseCase implements OrderServicePort {
     private final RestaurantEmployeePersistentPort restaurantEmployeePersistentPort;
     private final UserInformationPort userInformationPort;
     private final MessageNotificationPort messageNotificationPort;
+    private final OrderTraceabilityPort orderTraceabilityPort;
 
     public OrderUseCase(OrderPersistentPort orderPersistentPort,
                         DishPersistentPort dishPersistentPort,
                         RestaurantPersistentPort restaurantPersistentPort,
                         RestaurantEmployeePersistentPort restaurantEmployeePersistentPort,
                         UserInformationPort userInformationPort,
-                        MessageNotificationPort messageNotificationPort) {
+                        MessageNotificationPort messageNotificationPort,
+                        OrderTraceabilityPort orderTraceabilityPort) {
         this.orderPersistentPort = orderPersistentPort;
         this.dishPersistentPort = dishPersistentPort;
         this.restaurantPersistentPort = restaurantPersistentPort;
         this.restaurantEmployeePersistentPort = restaurantEmployeePersistentPort;
         this.userInformationPort = userInformationPort;
         this.messageNotificationPort = messageNotificationPort;
+        this.orderTraceabilityPort = orderTraceabilityPort;
     }
 
     @Override
@@ -84,7 +89,10 @@ public class OrderUseCase implements OrderServicePort {
         order.setStatus(OrderStatus.PENDIENTE);
         order.setDate(LocalDateTime.now(ZoneId.systemDefault()));
 
-        return orderPersistentPort.save(order);
+        Order savedOrder = orderPersistentPort.save(order);
+        recordOrderTrace(savedOrder, null, OrderStatus.PENDIENTE.name(), null);
+
+        return savedOrder;
     }
 
     @Override
@@ -124,7 +132,10 @@ public class OrderUseCase implements OrderServicePort {
         order.setStatus(OrderStatus.EN_PREPARACION);
         order.setChefId(employeeId);
 
-        return orderPersistentPort.save(order);
+        Order savedOrder = orderPersistentPort.save(order);
+        recordOrderTrace(savedOrder, OrderStatus.PENDIENTE.name(), OrderStatus.EN_PREPARACION.name(), employeeId);
+
+        return savedOrder;
     }
 
     @Override
@@ -149,6 +160,7 @@ public class OrderUseCase implements OrderServicePort {
         Order savedOrder = orderPersistentPort.save(order);
 
         notifyClientOrderReady(savedOrder, securityPin);
+        recordOrderTrace(savedOrder, OrderStatus.EN_PREPARACION.name(), OrderStatus.LISTO.name(), employeeId);
 
         return savedOrder;
     }
@@ -172,7 +184,10 @@ public class OrderUseCase implements OrderServicePort {
 
         order.setStatus(OrderStatus.ENTREGADO);
 
-        return orderPersistentPort.save(order);
+        Order savedOrder = orderPersistentPort.save(order);
+        recordOrderTrace(savedOrder, OrderStatus.LISTO.name(), OrderStatus.ENTREGADO.name(), employeeId);
+
+        return savedOrder;
     }
 
     @Override
@@ -189,7 +204,26 @@ public class OrderUseCase implements OrderServicePort {
 
         order.setStatus(OrderStatus.CANCELADO);
 
-        return orderPersistentPort.save(order);
+        Order savedOrder = orderPersistentPort.save(order);
+        recordOrderTrace(savedOrder, OrderStatus.PENDIENTE.name(), OrderStatus.CANCELADO.name(), null);
+
+        return savedOrder;
+    }
+
+    private void recordOrderTrace(Order order, String previousStatus, String newStatus, Long employeeId) {
+        String clientEmail = userInformationPort.getUserEmail(order.getClientId());
+        String employeeEmail = employeeId != null ? userInformationPort.getUserEmail(employeeId) : null;
+        OrderTraceLog traceLog = new OrderTraceLog(
+                order.getId(),
+                order.getClientId(),
+                clientEmail,
+                LocalDateTime.now(ZoneId.systemDefault()),
+                previousStatus,
+                newStatus,
+                employeeId,
+                employeeEmail
+        );
+        orderTraceabilityPort.saveOrderTrace(traceLog);
     }
 
     private Order getOrderOrThrow(Long orderId) {
@@ -220,21 +254,21 @@ public class OrderUseCase implements OrderServicePort {
         return String.format(PIN_FORMAT, pinNumber);
     }
 
-    private void validateSecurityPinNotNullOrBlank(String securityPin) {
-        if (securityPin == null || securityPin.isBlank()) {
-            throw new InvalidSecurityPinException("Security PIN cannot be null or empty");
+    private void validateSecurityPinMatches(Order order, String securityPin) {
+        if (order.getSecurityPin() == null || !order.getSecurityPin().equals(securityPin)) {
+            throw new InvalidSecurityPinException("Invalid security PIN for order id: " + order.getId());
         }
     }
 
     private void validateOrderIsInReadyStatus(Order order) {
         if (order.getStatus() != OrderStatus.LISTO) {
-            throw new InvalidOrderStatusException("Only orders in LISTO status can be delivered");
+            throw new InvalidOrderStatusException("Order must be in LISTO status to be delivered");
         }
     }
 
-    private void validateSecurityPinMatches(Order order, String securityPin) {
-        if (!securityPin.equals(order.getSecurityPin())) {
-            throw new InvalidSecurityPinException("Invalid security PIN for order id: " + order.getId());
+    private void validateSecurityPinNotNullOrBlank(String securityPin) {
+        if (securityPin == null || securityPin.trim().isEmpty()) {
+            throw new InvalidSecurityPinException("Security pin cannot be null or blank");
         }
     }
 

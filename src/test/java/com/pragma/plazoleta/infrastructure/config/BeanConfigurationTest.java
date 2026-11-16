@@ -7,6 +7,7 @@ import com.pragma.plazoleta.application.mapper.OrderDtoMapper;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.MessageNotificationPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
+import com.pragma.plazoleta.domain.repositoryPort.OrderTraceabilityPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantEmployeePersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.RestaurantPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
@@ -24,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.RestTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -54,6 +54,9 @@ class BeanConfigurationTest {
     private MessageNotificationPort messageNotificationPort;
 
     @Mock
+    private OrderTraceabilityPort orderTraceabilityPort;
+
+    @Mock
     private OrderDtoMapper orderDtoMapper;
 
     @Test
@@ -77,7 +80,8 @@ class BeanConfigurationTest {
                 restaurantPersistentPort,
                 restaurantEmployeePersistentPort,
                 userInformationPort,
-                messageNotificationPort
+                messageNotificationPort,
+                orderTraceabilityPort
         );
         OrderHandler orderHandlerBean = config.orderHandler(orderBean, orderDtoMapper);
         OpenAPI openAPIBean = config.customOpenAPI();

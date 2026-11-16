@@ -297,4 +297,56 @@ class UserInformationAdapterTest {
 
         assertFalse(result);
     }
+
+    // Pruebas de getUserEmail (Trazabilidad)
+    @Test
+    @DisplayName("Should return user email when user exists")
+    void shouldReturnUserEmailWhenUserExists() {
+        UserResponseDto user = new UserResponseDto();
+        user.setId(4L);
+        user.setEmail("cliente@correo.com");
+
+        when(userFeignClient.getUserById(4L)).thenReturn(user);
+
+        String email = userInformationAdapter.getUserEmail(4L);
+
+        assertEquals("cliente@correo.com", email);
+        verify(userFeignClient).getUserById(4L);
+    }
+
+    @Test
+    @DisplayName("Should return null when userId is null on getUserEmail")
+    void shouldReturnNullWhenUserIdIsNullOnGetUserEmail() {
+        String email = userInformationAdapter.getUserEmail(null);
+
+        assertNull(email);
+        verify(userFeignClient, never()).getUserById(any());
+    }
+
+    @Test
+    @DisplayName("Should return null when user is null on getUserEmail")
+    void shouldReturnNullWhenUserIsNullOnGetUserEmail() {
+        when(userFeignClient.getUserById(4L)).thenReturn(null);
+
+        String email = userInformationAdapter.getUserEmail(4L);
+
+        assertNull(email);
+    }
+
+    @Test
+    @DisplayName("Should return null when user not found in feign client on getUserEmail")
+    void shouldReturnNullWhenUserNotFoundOnGetUserEmail() {
+        Request request = Request.create(
+                Request.HttpMethod.GET,
+                "/users/99",
+                Collections.emptyMap(),
+                null,
+                new RequestTemplate()
+        );
+        when(userFeignClient.getUserById(99L)).thenThrow(new FeignException.NotFound("User not found", request, null, null));
+
+        String email = userInformationAdapter.getUserEmail(99L);
+
+        assertNull(email);
+    }
 }

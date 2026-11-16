@@ -43,6 +43,9 @@ class OrderUseCaseTest {
     @Mock
     private MessageNotificationPort messageNotificationPort;
 
+    @Mock
+    private OrderTraceabilityPort orderTraceabilityPort;
+
     @InjectMocks
     private OrderUseCase orderUseCase;
 

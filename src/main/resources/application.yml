@@ -5,6 +5,10 @@ spring:
   application:
     name: microservicio-plazoleta
 
+  jackson:
+    time-zone: America/Bogota
+    date-format: yyyy-MM-dd'T'HH:mm:ss
+
   datasource:
     url: jdbc:mysql://localhost:3306/plazoleta_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root

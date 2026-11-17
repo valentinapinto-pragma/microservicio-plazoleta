@@ -158,8 +158,8 @@ class OrderControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 Bad Request when restaurant does not exist on create order")
-    void shouldReturnBadRequestWhenRestaurantDoesNotExist() throws Exception {
+    @DisplayName("Should return 404 Not Found when restaurant does not exist on create order")
+    void shouldReturnNotFoundWhenRestaurantDoesNotExist() throws Exception {
         OrderRequestDto dto = new OrderRequestDto(999L, List.of(new OrderDishRequestDto(100L, 2)));
 
         doThrow(new RestaurantNotFoundException("Restaurant not found with id: 999"))
@@ -168,7 +168,7 @@ class OrderControllerTest {
         mockMvc.perform(post("/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Restaurant not found with id: 999"));
     }
 
@@ -236,8 +236,8 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser(roles = "EMPLOYEE")
-    @DisplayName("Should return 400 Bad Request when employee is not assigned to any restaurant on get orders")
-    void shouldReturnBadRequestWhenEmployeeNotAssignedToRestaurant() throws Exception {
+    @DisplayName("Should return 403 Forbidden when employee is not assigned to any restaurant on get orders")
+    void shouldReturnForbiddenWhenEmployeeNotAssignedToRestaurant() throws Exception {
         doThrow(new EmployeeNotAssignedToRestaurantException("The employee is not assigned to any restaurant"))
                 .when(orderHandler).getOrdersByStatus(OrderStatus.PENDIENTE, 0, 10);
 
@@ -246,7 +246,7 @@ class OrderControllerTest {
                         .param("page", "0")
                         .param("size", "10")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("The employee is not assigned to any restaurant"));
     }
 
@@ -302,8 +302,8 @@ class OrderControllerTest {
 
     @Test
     @WithMockUser(roles = "EMPLOYEE")
-    @DisplayName("Should return 400 Bad Request when order belongs to a different restaurant on assign")
-    void shouldReturnBadRequestWhenOrderBelongsToOtherRestaurantOnAssign() throws Exception {
+    @DisplayName("Should return 403 Forbidden when order belongs to a different restaurant on assign")
+    void shouldReturnForbiddenWhenOrderBelongsToOtherRestaurantOnAssign() throws Exception {
         Long orderId = 100L;
 
         doThrow(new OrderDoesNotBelongToRestaurantException("The order does not belong to the restaurant where the employee works"))
@@ -311,7 +311,7 @@ class OrderControllerTest {
 
         mockMvc.perform(patch("/orders/{id}/status", orderId)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("The order does not belong to the restaurant where the employee works"));
     }
 

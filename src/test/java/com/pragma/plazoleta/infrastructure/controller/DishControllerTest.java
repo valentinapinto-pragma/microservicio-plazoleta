@@ -173,8 +173,8 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 Bad Request when handler throws RestaurantNotFoundException on create")
-    void shouldReturnBadRequestWhenRestaurantNotFoundOnCreate() throws Exception {
+    @DisplayName("Should return 404 Not Found when handler throws RestaurantNotFoundException on create")
+    void shouldReturnNotFoundWhenRestaurantNotFoundOnCreate() throws Exception {
         DishRequestDto dto = new DishRequestDto("Hamburguesa", 15000, "Deliciosa carne", "https://img.com/burger.png", 1L, 99L);
 
         doThrow(new RestaurantNotFoundException("The restaurant associated with the dish does not exist"))
@@ -183,7 +183,7 @@ class DishControllerTest {
         mockMvc.perform(post("/dishes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("The restaurant associated with the dish does not exist"));
     }
 
@@ -359,8 +359,8 @@ class DishControllerTest {
     }
 
     @Test
-    @DisplayName("Should return 400 Bad Request when restaurant does not exist on get dishes")
-    void shouldReturnBadRequestWhenRestaurantDoesNotExistOnGetDishes() throws Exception {
+    @DisplayName("Should return 404 Not Found when restaurant does not exist on get dishes")
+    void shouldReturnNotFoundWhenRestaurantDoesNotExistOnGetDishes() throws Exception {
         doThrow(new RestaurantNotFoundException("The restaurant associated with the dish does not exist"))
                 .when(dishHandler).getDishesByRestaurant(eq(99L), isNull(), anyInt(), anyInt());
 
@@ -368,7 +368,7 @@ class DishControllerTest {
                         .param("idRestaurant", "99")
                         .param("page", "0")
                         .param("size", "10"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("The restaurant associated with the dish does not exist"));
     }
 

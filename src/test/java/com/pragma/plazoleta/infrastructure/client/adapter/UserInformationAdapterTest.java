@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.client.adapter;
 
+import com.pragma.plazoleta.domain.exception.UserNotAuthenticatedException;
 import com.pragma.plazoleta.domain.model.UserInfo;
 import com.pragma.plazoleta.infrastructure.client.dto.RoleResponseDto;
 import com.pragma.plazoleta.infrastructure.client.dto.UserResponseDto;
@@ -135,46 +136,46 @@ class UserInformationAdapterTest {
     }
 
     @Test
-    @DisplayName("Should throw IllegalStateException when no HTTP request context is available")
+    @DisplayName("Should throw UserNotAuthenticatedException when no HTTP request context is available")
     void shouldThrowWhenNoRequestContextAvailable() {
         RequestContextHolder.resetRequestAttributes();
 
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
+        UserNotAuthenticatedException exception = assertThrows(
+                UserNotAuthenticatedException.class,
                 () -> userInformationAdapter.getAuthenticatedUserId()
         );
-        assertEquals("No hay una petición HTTP activa en el contexto de ejecución", exception.getMessage());
+        assertEquals("No active HTTP request to resolve the authenticated user", exception.getMessage());
     }
 
     @Test
-    @DisplayName("Should throw IllegalStateException when Authorization header is missing")
+    @DisplayName("Should throw UserNotAuthenticatedException when Authorization header is missing")
     void shouldThrowWhenAuthorizationHeaderIsMissing() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
+        UserNotAuthenticatedException exception = assertThrows(
+                UserNotAuthenticatedException.class,
                 () -> userInformationAdapter.getAuthenticatedUserId()
         );
-        assertEquals("Encabezado de autorización ausente o con formato inválido", exception.getMessage());
+        assertEquals("Authorization header is missing or does not use the Bearer scheme", exception.getMessage());
     }
 
     @Test
-    @DisplayName("Should throw IllegalStateException when Authorization header does not start with Bearer")
+    @DisplayName("Should throw UserNotAuthenticatedException when Authorization header does not start with Bearer")
     void shouldThrowWhenAuthorizationHeaderIsNotBearer() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, "Basic user:pass");
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
+        UserNotAuthenticatedException exception = assertThrows(
+                UserNotAuthenticatedException.class,
                 () -> userInformationAdapter.getAuthenticatedUserId()
         );
-        assertEquals("Encabezado de autorización ausente o con formato inválido", exception.getMessage());
+        assertEquals("Authorization header is missing or does not use the Bearer scheme", exception.getMessage());
     }
 
     @Test
-    @DisplayName("Should throw IllegalStateException when token is invalid or expired")
+    @DisplayName("Should throw UserNotAuthenticatedException when token is invalid or expired")
     void shouldThrowWhenTokenIsInvalidOrExpired() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer invalid.token");
@@ -182,11 +183,11 @@ class UserInformationAdapterTest {
 
         when(jwtAdapter.validateToken("invalid.token")).thenReturn(false);
 
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
+        UserNotAuthenticatedException exception = assertThrows(
+                UserNotAuthenticatedException.class,
                 () -> userInformationAdapter.getAuthenticatedUserId()
         );
-        assertEquals("El token JWT proporcionado es inválido o ha expirado", exception.getMessage());
+        assertEquals("The provided JWT token is invalid or has expired", exception.getMessage());
         verify(jwtAdapter, never()).extractUserId(any());
     }
 

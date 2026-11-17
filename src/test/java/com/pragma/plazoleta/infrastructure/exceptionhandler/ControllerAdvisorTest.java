@@ -37,10 +37,10 @@ class ControllerAdvisorTest {
     }
 
     @Test
-    @DisplayName("Should handle bad request exceptions and return 400 Bad Request")
-    void shouldHandleBadRequestExceptions() {
+    @DisplayName("Should handle business rule violations and return 400 Bad Request")
+    void shouldHandleBusinessRuleViolation() {
         InvalidRestaurantDataException ex = new InvalidRestaurantDataException("Invalid restaurant data");
-        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleBadRequestExceptions(ex);
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleBusinessRuleViolation(ex);
 
         assertNotNull(response);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -49,35 +49,51 @@ class ControllerAdvisorTest {
     }
 
     @Test
-    @DisplayName("Should handle not found exceptions and return 404 Not Found")
-    void shouldHandleNotFoundExceptions() {
-        DishNotFoundException dishEx = new DishNotFoundException("Dish not found with id: 1");
-        ResponseEntity<ErrorResponseDto> dishResponse = controllerAdvisor.handleNotFoundExceptions(dishEx);
+    @DisplayName("Should handle resource not found exceptions and return 404 Not Found")
+    void shouldHandleResourceNotFound() {
+        RestaurantNotFoundException ex = new RestaurantNotFoundException("Restaurant not found with id: 1");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleResourceNotFound(ex);
 
-        assertNotNull(dishResponse);
-        assertEquals(HttpStatus.NOT_FOUND, dishResponse.getStatusCode());
-        assertNotNull(dishResponse.getBody());
-        assertEquals("Dish not found with id: 1", dishResponse.getBody().getMessage());
-
-        OrderNotFoundException orderEx = new OrderNotFoundException("Order not found with id: 10");
-        ResponseEntity<ErrorResponseDto> orderResponse = controllerAdvisor.handleNotFoundExceptions(orderEx);
-
-        assertNotNull(orderResponse);
-        assertEquals(HttpStatus.NOT_FOUND, orderResponse.getStatusCode());
-        assertNotNull(orderResponse.getBody());
-        assertEquals("Order not found with id: 10", orderResponse.getBody().getMessage());
+        assertNotNull(response);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Restaurant not found with id: 1", response.getBody().getMessage());
     }
 
     @Test
-    @DisplayName("Should handle forbidden business exceptions and return 403 Forbidden")
-    void shouldHandleForbiddenExceptions() {
-        UserNotOwnerOfRestaurantException ex = new UserNotOwnerOfRestaurantException("The user is not the owner");
-        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleForbiddenExceptions(ex);
+    @DisplayName("Should handle forbidden operations and return 403 Forbidden")
+    void shouldHandleForbiddenOperation() {
+        OrderDoesNotBelongToRestaurantException ex = new OrderDoesNotBelongToRestaurantException("The order does not belong to the restaurant");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleForbiddenOperation(ex);
 
         assertNotNull(response);
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("The user is not the owner", response.getBody().getMessage());
+        assertEquals("The order does not belong to the restaurant", response.getBody().getMessage());
+    }
+
+    @Test
+    @DisplayName("Should handle UserNotAuthenticatedException and return 401 Unauthorized")
+    void shouldHandleUserNotAuthenticated() {
+        UserNotAuthenticatedException ex = new UserNotAuthenticatedException("The provided JWT token is invalid or has expired");
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleUserNotAuthenticated(ex);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("The provided JWT token is invalid or has expired", response.getBody().getMessage());
+    }
+
+    @Test
+    @DisplayName("Should handle uncategorized domain exceptions as 400 Bad Request instead of 500")
+    void shouldHandleUncategorizedDomainException() {
+        DomainException ex = new DomainException("Uncategorized business error") { };
+        ResponseEntity<ErrorResponseDto> response = controllerAdvisor.handleUncategorizedDomainException(ex);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Uncategorized business error", response.getBody().getMessage());
     }
 
     @Test

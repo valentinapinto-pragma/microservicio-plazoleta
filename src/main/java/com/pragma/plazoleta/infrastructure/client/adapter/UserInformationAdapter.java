@@ -1,5 +1,6 @@
 package com.pragma.plazoleta.infrastructure.client.adapter;
 
+import com.pragma.plazoleta.domain.exception.UserNotAuthenticatedException;
 import com.pragma.plazoleta.domain.model.RoleEnum;
 import com.pragma.plazoleta.domain.model.UserInfo;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
@@ -19,6 +20,11 @@ import javax.servlet.http.HttpServletRequest;
 @RequiredArgsConstructor
 public class UserInformationAdapter implements UserInformationPort {
 
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String NO_REQUEST_CONTEXT_MESSAGE = "No active HTTP request to resolve the authenticated user";
+    private static final String MISSING_TOKEN_MESSAGE = "Authorization header is missing or does not use the Bearer scheme";
+    private static final String INVALID_TOKEN_MESSAGE = "The provided JWT token is invalid or has expired";
+
     private final UserFeignClient userFeignClient;
     private final JwtAdapter jwtAdapter;
 
@@ -37,20 +43,20 @@ public class UserInformationAdapter implements UserInformationPort {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 
         if (attributes == null) {
-            throw new IllegalStateException("No hay una petición HTTP activa en el contexto de ejecución");
+            throw new UserNotAuthenticatedException(NO_REQUEST_CONTEXT_MESSAGE);
         }
 
         HttpServletRequest request = attributes.getRequest();
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalStateException("Encabezado de autorización ausente o con formato inválido");
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+            throw new UserNotAuthenticatedException(MISSING_TOKEN_MESSAGE);
         }
 
-        String token = authHeader.substring(7);
+        String token = authHeader.substring(BEARER_PREFIX.length());
 
         if (!jwtAdapter.validateToken(token)) {
-            throw new IllegalStateException("El token JWT proporcionado es inválido o ha expirado");
+            throw new UserNotAuthenticatedException(INVALID_TOKEN_MESSAGE);
         }
 
         return jwtAdapter.extractUserId(token);

@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.client.adapter;
 
 import com.pragma.plazoleta.domain.model.RoleEnum;
+import com.pragma.plazoleta.domain.model.UserInfo;
 import com.pragma.plazoleta.domain.repositoryPort.UserInformationPort;
 import com.pragma.plazoleta.infrastructure.client.dto.UserResponseDto;
 import com.pragma.plazoleta.infrastructure.client.feign.UserFeignClient;
@@ -56,16 +57,6 @@ public class UserInformationAdapter implements UserInformationPort {
     }
 
     @Override
-    public String getClientPhoneNumber(Long clientId) {
-        try {
-            UserResponseDto user = userFeignClient.getUserById(clientId);
-            return user != null ? user.getPhoneNumber() : null;
-        } catch (FeignException.NotFound e) {
-            return null;
-        }
-    }
-
-    @Override
     public boolean isValidEmployee(Long employeeId) {
         try {
             UserResponseDto user = userFeignClient.getUserById(employeeId);
@@ -76,13 +67,16 @@ public class UserInformationAdapter implements UserInformationPort {
     }
 
     @Override
-    public String getUserEmail(Long userId) {
+    public UserInfo getUserById(Long userId) {
         if (userId == null) {
             return null;
         }
         try {
             UserResponseDto user = userFeignClient.getUserById(userId);
-            return user != null ? user.getEmail() : null;
+            if (user == null) {
+                return null;
+            }
+            return new UserInfo(user.getId(), user.getEmail(), user.getPhoneNumber());
         } catch (FeignException.NotFound e) {
             return null;
         }

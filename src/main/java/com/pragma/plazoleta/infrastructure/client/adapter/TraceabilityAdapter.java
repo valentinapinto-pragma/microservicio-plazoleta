@@ -29,7 +29,9 @@ public class TraceabilityAdapter implements OrderTraceabilityPort {
                     orderTraceLog.getPreviousStatus(),
                     orderTraceLog.getNewStatus(),
                     orderTraceLog.getEmployeeId(),
-                    orderTraceLog.getEmployeeEmail()
+                    orderTraceLog.getEmployeeEmail(),
+                    orderTraceLog.getRestaurantId(),
+                    orderTraceLog.getRestaurantOwnerId()
             );
             traceabilityFeignClient.saveOrderTrace(requestDto);
             log.info("Traza registrada exitosamente en microservicio-trazabilidad para pedido {}", orderTraceLog.getOrderId());

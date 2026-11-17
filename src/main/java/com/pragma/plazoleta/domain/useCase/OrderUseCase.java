@@ -25,12 +25,14 @@ import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class OrderUseCase implements OrderServicePort {
 
+    private static final ZoneId ZONE_BOGOTA = ZoneId.of("America/Bogota");
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     public static final int MIN_PAGE_NUMBER = 0;
     public static final int MIN_SIZE_REQUIRED = 0;
@@ -80,7 +82,7 @@ public class OrderUseCase implements OrderServicePort {
         validateOrderDishes(order);
 
         order.setStatus(OrderStatus.PENDIENTE);
-        order.setDate(LocalDateTime.now());
+        order.setDate(LocalDateTime.now(ZONE_BOGOTA));
 
         Order savedOrder = orderPersistentPort.save(order);
         recordOrderTrace(savedOrder, null, OrderStatus.PENDIENTE.name(), null);
@@ -209,18 +211,19 @@ public class OrderUseCase implements OrderServicePort {
         Long restaurantOwnerId = restaurantPersistentPort.findById(order.getRestaurantId())
                 .map(Restaurant::getIdOwner)
                 .orElse(null);
-        OrderTraceLog traceLog = new OrderTraceLog(
-                order.getId(),
-                order.getClientId(),
-                clientEmail,
-                null,
-                previousStatus,
-                newStatus,
-                employeeId,
-                employeeEmail,
-                order.getRestaurantId(),
-                restaurantOwnerId
-        );
+
+        OrderTraceLog traceLog = OrderTraceLog.builder()
+                .orderId(order.getId())
+                .clientId(order.getClientId())
+                .clientEmail(clientEmail)
+                .previousStatus(previousStatus)
+                .newStatus(newStatus)
+                .employeeId(employeeId)
+                .employeeEmail(employeeEmail)
+                .restaurantId(order.getRestaurantId())
+                .restaurantOwnerId(restaurantOwnerId)
+                .build();
+
         orderTraceabilityPort.saveOrderTrace(traceLog);
     }
 

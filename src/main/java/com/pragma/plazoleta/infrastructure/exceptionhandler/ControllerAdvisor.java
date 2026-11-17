@@ -1,6 +1,7 @@
 package com.pragma.plazoleta.infrastructure.exceptionhandler;
 
 import com.pragma.plazoleta.domain.exception.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -10,19 +11,54 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.util.stream.Collectors;
 
+@Slf4j
 @ControllerAdvice
 public class ControllerAdvisor {
 
-    @ExceptionHandler(InvalidRestaurantDataException.class)
-    public ResponseEntity<ErrorResponseDto> handleInvalidRestaurantDataException(InvalidRestaurantDataException ex) {
+    @ExceptionHandler({
+            InvalidRestaurantDataException.class,
+            OwnerNotValidException.class,
+            InvalidDishDataException.class,
+            InvalidOrderDataException.class,
+            EmployeeNotAssignedToRestaurantException.class,
+            ClientHasActiveOrderException.class,
+            DishDoesNotBelongToRestaurantException.class,
+            DishInactiveException.class,
+            RestaurantNotFoundException.class,
+            OrderDoesNotBelongToRestaurantException.class,
+            InvalidOrderStatusException.class,
+            EmployeeAlreadyAssignedException.class,
+            InvalidEmployeeException.class,
+            InvalidSecurityPinException.class,
+            OrderCannotBeCancelledException.class
+    })
+    public ResponseEntity<ErrorResponseDto> handleBadRequestExceptions(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponseDto(ex.getMessage()));
     }
 
-    @ExceptionHandler(OwnerNotValidException.class)
-    public ResponseEntity<ErrorResponseDto> handleOwnerNotValidException(OwnerNotValidException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler({
+            DishNotFoundException.class,
+            OrderNotFoundException.class
+    })
+    public ResponseEntity<ErrorResponseDto> handleNotFoundExceptions(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler({
+            UserNotOwnerOfRestaurantException.class,
+            OrderDoesNotBelongToClientException.class
+    })
+    public ResponseEntity<ErrorResponseDto> handleForbiddenExceptions(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponseDto(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccessDeniedException(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponseDto("Access denied: You do not have permissions to perform this action"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -35,111 +71,10 @@ public class ControllerAdvisor {
                 .body(new ErrorResponseDto(combinedErrors.isEmpty() ? "Invalid input data" : combinedErrors));
     }
 
-    @ExceptionHandler(InvalidDishDataException.class)
-    public ResponseEntity<ErrorResponseDto> handleInvalidDishDataException(InvalidDishDataException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidOrderDataException.class)
-    public ResponseEntity<ErrorResponseDto> handleInvalidOrderDataException(InvalidOrderDataException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EmployeeNotAssignedToRestaurantException.class)
-    public ResponseEntity<ErrorResponseDto> handleEmployeeNotAssignedToRestaurantException(EmployeeNotAssignedToRestaurantException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(ClientHasActiveOrderException.class)
-    public ResponseEntity<ErrorResponseDto> handleClientHasActiveOrderException(ClientHasActiveOrderException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(DishDoesNotBelongToRestaurantException.class)
-    public ResponseEntity<ErrorResponseDto> handleDishDoesNotBelongToRestaurantException(DishDoesNotBelongToRestaurantException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(DishInactiveException.class)
-    public ResponseEntity<ErrorResponseDto> handleDishInactiveException(DishInactiveException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(RestaurantNotFoundException.class)
-    public ResponseEntity<ErrorResponseDto> handleRestaurantNotFoundException(RestaurantNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(OrderNotFoundException.class)
-    public ResponseEntity<ErrorResponseDto> handleOrderNotFoundException(OrderNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(OrderDoesNotBelongToRestaurantException.class)
-    public ResponseEntity<ErrorResponseDto> handleOrderDoesNotBelongToRestaurantException(OrderDoesNotBelongToRestaurantException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidOrderStatusException.class)
-    public ResponseEntity<ErrorResponseDto> handleInvalidOrderStatusException(InvalidOrderStatusException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(DishNotFoundException.class)
-    public ResponseEntity<ErrorResponseDto> handleDishNotFoundException(DishNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(UserNotOwnerOfRestaurantException.class)
-    public ResponseEntity<ErrorResponseDto> handleUserNotOwnerOfRestaurantException(UserNotOwnerOfRestaurantException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponseDto> handleAccessDeniedException(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponseDto("Access denied: You do not have permissions to perform this action"));
-    }
-
-    @ExceptionHandler(EmployeeAlreadyAssignedException.class)
-    public ResponseEntity<ErrorResponseDto> handleEmployeeAlreadyAssignedException(EmployeeAlreadyAssignedException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidEmployeeException.class)
-    public ResponseEntity<ErrorResponseDto> handleInvalidEmployeeException(InvalidEmployeeException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidSecurityPinException.class)
-    public ResponseEntity<ErrorResponseDto> handleInvalidSecurityPinException(InvalidSecurityPinException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(OrderCannotBeCancelledException.class)
-    public ResponseEntity<ErrorResponseDto> handleOrderCannotBeCancelledException(OrderCannotBeCancelledException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
-    }
-
-    @ExceptionHandler(OrderDoesNotBelongToClientException.class)
-    public ResponseEntity<ErrorResponseDto> handleOrderDoesNotBelongToClientException(OrderDoesNotBelongToClientException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponseDto(ex.getMessage()));
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponseDto> handleGlobalException(Exception ex) {
+        log.error("Unhandled internal exception: ", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponseDto("An unexpected internal error occurred"));
     }
 }

@@ -38,7 +38,9 @@ class TraceabilityAdapterTest {
                 null,
                 "PENDIENTE",
                 null,
-                null
+                null,
+                10L,
+                2L
         );
 
         traceabilityAdapter.saveOrderTrace(traceLog);
@@ -52,6 +54,8 @@ class TraceabilityAdapterTest {
         assertEquals("cliente@correo.com", captured.getClientEmail());
         assertEquals("PENDIENTE", captured.getNewStatus());
         assertNull(captured.getPreviousStatus());
+        assertEquals(10L, captured.getRestaurantId());
+        assertEquals(2L, captured.getRestaurantOwnerId());
     }
 
     @Test
@@ -72,7 +76,9 @@ class TraceabilityAdapterTest {
                 null,
                 "PENDIENTE",
                 null,
-                null
+                null,
+                10L,
+                2L
         );
 
         doThrow(new RuntimeException("Connection refused")).when(traceabilityFeignClient).saveOrderTrace(any());

@@ -21,7 +21,9 @@ class TraceabilityRequestDtoTest {
                 "PENDIENTE",
                 "EN_PREPARACION",
                 3L,
-                "empleado@correo.com"
+                "empleado@correo.com",
+                10L,
+                2L
         );
 
         assertEquals(1L, dto.getOrderId());
@@ -32,6 +34,8 @@ class TraceabilityRequestDtoTest {
         assertEquals("EN_PREPARACION", dto.getNewStatus());
         assertEquals(3L, dto.getEmployeeId());
         assertEquals("empleado@correo.com", dto.getEmployeeEmail());
+        assertEquals(10L, dto.getRestaurantId());
+        assertEquals(2L, dto.getRestaurantOwnerId());
     }
 
     @Test
@@ -48,6 +52,8 @@ class TraceabilityRequestDtoTest {
         dto.setNewStatus("PENDIENTE");
         dto.setEmployeeId(null);
         dto.setEmployeeEmail(null);
+        dto.setRestaurantId(10L);
+        dto.setRestaurantOwnerId(2L);
 
         assertEquals(1L, dto.getOrderId());
         assertEquals(4L, dto.getClientId());
@@ -57,5 +63,7 @@ class TraceabilityRequestDtoTest {
         assertEquals("PENDIENTE", dto.getNewStatus());
         assertNull(dto.getEmployeeId());
         assertNull(dto.getEmployeeEmail());
+        assertEquals(10L, dto.getRestaurantId());
+        assertEquals(2L, dto.getRestaurantOwnerId());
     }
 }

@@ -21,7 +21,9 @@ class OrderTraceLogTest {
                 null,
                 "PENDIENTE",
                 3L,
-                "empleado@correo.com"
+                "empleado@correo.com",
+                10L,
+                2L
         );
 
         assertEquals(1L, traceLog.getOrderId());
@@ -32,6 +34,8 @@ class OrderTraceLogTest {
         assertEquals("PENDIENTE", traceLog.getNewStatus());
         assertEquals(3L, traceLog.getEmployeeId());
         assertEquals("empleado@correo.com", traceLog.getEmployeeEmail());
+        assertEquals(10L, traceLog.getRestaurantId());
+        assertEquals(2L, traceLog.getRestaurantOwnerId());
     }
 
     @Test
@@ -48,6 +52,8 @@ class OrderTraceLogTest {
         traceLog.setNewStatus("EN_PREPARACION");
         traceLog.setEmployeeId(30L);
         traceLog.setEmployeeEmail("chef@correo.com");
+        traceLog.setRestaurantId(1L);
+        traceLog.setRestaurantOwnerId(2L);
 
         assertEquals(10L, traceLog.getOrderId());
         assertEquals(20L, traceLog.getClientId());
@@ -57,5 +63,7 @@ class OrderTraceLogTest {
         assertEquals("EN_PREPARACION", traceLog.getNewStatus());
         assertEquals(30L, traceLog.getEmployeeId());
         assertEquals("chef@correo.com", traceLog.getEmployeeEmail());
+        assertEquals(1L, traceLog.getRestaurantId());
+        assertEquals(2L, traceLog.getRestaurantOwnerId());
     }
 }

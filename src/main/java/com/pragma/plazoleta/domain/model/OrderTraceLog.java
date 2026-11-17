@@ -11,12 +11,15 @@ public class OrderTraceLog {
     private String newStatus;
     private Long employeeId;
     private String employeeEmail;
+    private Long restaurantId;
+    private Long restaurantOwnerId;
 
     public OrderTraceLog() {
     }
 
     public OrderTraceLog(Long orderId, Long clientId, String clientEmail, LocalDateTime date,
-                         String previousStatus, String newStatus, Long employeeId, String employeeEmail) {
+                         String previousStatus, String newStatus, Long employeeId, String employeeEmail,
+                         Long restaurantId, Long restaurantOwnerId) {
         this.orderId = orderId;
         this.clientId = clientId;
         this.clientEmail = clientEmail;
@@ -25,6 +28,8 @@ public class OrderTraceLog {
         this.newStatus = newStatus;
         this.employeeId = employeeId;
         this.employeeEmail = employeeEmail;
+        this.restaurantId = restaurantId;
+        this.restaurantOwnerId = restaurantOwnerId;
     }
 
     public Long getOrderId() {
@@ -90,5 +95,20 @@ public class OrderTraceLog {
     public void setEmployeeEmail(String employeeEmail) {
         this.employeeEmail = employeeEmail;
     }
-}
 
+    public Long getRestaurantId() {
+        return restaurantId;
+    }
+
+    public void setRestaurantId(Long restaurantId) {
+        this.restaurantId = restaurantId;
+    }
+
+    public Long getRestaurantOwnerId() {
+        return restaurantOwnerId;
+    }
+
+    public void setRestaurantOwnerId(Long restaurantOwnerId) {
+        this.restaurantOwnerId = restaurantOwnerId;
+    }
+}

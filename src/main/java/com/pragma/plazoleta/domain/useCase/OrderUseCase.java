@@ -13,13 +13,7 @@ import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToClientException
 import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.OrderNotFoundException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
-import com.pragma.plazoleta.domain.model.CustomPage;
-import com.pragma.plazoleta.domain.model.Dish;
-import com.pragma.plazoleta.domain.model.Order;
-import com.pragma.plazoleta.domain.model.OrderDish;
-import com.pragma.plazoleta.domain.model.OrderStatus;
-import com.pragma.plazoleta.domain.model.OrderTraceLog;
-import com.pragma.plazoleta.domain.model.RestaurantEmployee;
+import com.pragma.plazoleta.domain.model.*;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.MessageNotificationPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
@@ -31,7 +25,6 @@ import com.pragma.plazoleta.domain.servicePort.OrderServicePort;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -87,7 +80,7 @@ public class OrderUseCase implements OrderServicePort {
         validateOrderDishes(order);
 
         order.setStatus(OrderStatus.PENDIENTE);
-        order.setDate(LocalDateTime.now(ZoneId.systemDefault()));
+        order.setDate(LocalDateTime.now());
 
         Order savedOrder = orderPersistentPort.save(order);
         recordOrderTrace(savedOrder, null, OrderStatus.PENDIENTE.name(), null);
@@ -213,15 +206,20 @@ public class OrderUseCase implements OrderServicePort {
     private void recordOrderTrace(Order order, String previousStatus, String newStatus, Long employeeId) {
         String clientEmail = userInformationPort.getUserEmail(order.getClientId());
         String employeeEmail = employeeId != null ? userInformationPort.getUserEmail(employeeId) : null;
+        Long restaurantOwnerId = restaurantPersistentPort.findById(order.getRestaurantId())
+                .map(Restaurant::getIdOwner)
+                .orElse(null);
         OrderTraceLog traceLog = new OrderTraceLog(
                 order.getId(),
                 order.getClientId(),
                 clientEmail,
-                LocalDateTime.now(ZoneId.systemDefault()),
+                null,
                 previousStatus,
                 newStatus,
                 employeeId,
-                employeeEmail
+                employeeEmail,
+                order.getRestaurantId(),
+                restaurantOwnerId
         );
         orderTraceabilityPort.saveOrderTrace(traceLog);
     }

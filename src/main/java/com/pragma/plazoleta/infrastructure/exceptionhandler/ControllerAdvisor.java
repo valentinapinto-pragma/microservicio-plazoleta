@@ -1,6 +1,10 @@
 package com.pragma.plazoleta.infrastructure.exceptionhandler;
 
-import com.pragma.plazoleta.domain.exception.*;
+import com.pragma.plazoleta.domain.exception.BusinessRuleViolationException;
+import com.pragma.plazoleta.domain.exception.DomainException;
+import com.pragma.plazoleta.domain.exception.ForbiddenOperationException;
+import com.pragma.plazoleta.domain.exception.ResourceNotFoundException;
+import com.pragma.plazoleta.domain.exception.UserNotAuthenticatedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,50 +19,39 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class ControllerAdvisor {
 
-    @ExceptionHandler({
-            InvalidRestaurantDataException.class,
-            OwnerNotValidException.class,
-            InvalidDishDataException.class,
-            InvalidOrderDataException.class,
-            EmployeeNotAssignedToRestaurantException.class,
-            ClientHasActiveOrderException.class,
-            DishDoesNotBelongToRestaurantException.class,
-            DishInactiveException.class,
-            RestaurantNotFoundException.class,
-            OrderDoesNotBelongToRestaurantException.class,
-            InvalidOrderStatusException.class,
-            EmployeeAlreadyAssignedException.class,
-            InvalidEmployeeException.class,
-            InvalidSecurityPinException.class,
-            OrderCannotBeCancelledException.class
-    })
-    public ResponseEntity<ErrorResponseDto> handleBadRequestExceptions(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(ex.getMessage()));
+    private static final String ACCESS_DENIED_MESSAGE = "Access denied: You do not have permissions to perform this action";
+    private static final String INVALID_INPUT_MESSAGE = "Invalid input data";
+    private static final String UNEXPECTED_ERROR_MESSAGE = "An unexpected internal error occurred";
+
+    @ExceptionHandler(BusinessRuleViolationException.class)
+    public ResponseEntity<ErrorResponseDto> handleBusinessRuleViolation(BusinessRuleViolationException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
-    @ExceptionHandler({
-            DishNotFoundException.class,
-            OrderNotFoundException.class
-    })
-    public ResponseEntity<ErrorResponseDto> handleNotFoundExceptions(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponseDto(ex.getMessage()));
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleResourceNotFound(ResourceNotFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
-    @ExceptionHandler({
-            UserNotOwnerOfRestaurantException.class,
-            OrderDoesNotBelongToClientException.class
-    })
-    public ResponseEntity<ErrorResponseDto> handleForbiddenExceptions(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponseDto(ex.getMessage()));
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ErrorResponseDto> handleForbiddenOperation(ForbiddenOperationException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    @ExceptionHandler(UserNotAuthenticatedException.class)
+    public ResponseEntity<ErrorResponseDto> handleUserNotAuthenticated(UserNotAuthenticatedException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<ErrorResponseDto> handleUncategorizedDomainException(DomainException ex) {
+        log.warn("Domain exception without a specific category: {}", ex.getClass().getSimpleName());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponseDto> handleAccessDeniedException(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponseDto("Access denied: You do not have permissions to perform this action"));
+        return buildResponse(HttpStatus.FORBIDDEN, ACCESS_DENIED_MESSAGE);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -67,14 +60,16 @@ public class ControllerAdvisor {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponseDto(combinedErrors.isEmpty() ? "Invalid input data" : combinedErrors));
+        return buildResponse(HttpStatus.BAD_REQUEST, combinedErrors.isEmpty() ? INVALID_INPUT_MESSAGE : combinedErrors);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleGlobalException(Exception ex) {
         log.error("Unhandled internal exception: ", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("An unexpected internal error occurred"));
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, UNEXPECTED_ERROR_MESSAGE);
+    }
+
+    private ResponseEntity<ErrorResponseDto> buildResponse(HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(new ErrorResponseDto(message));
     }
 }

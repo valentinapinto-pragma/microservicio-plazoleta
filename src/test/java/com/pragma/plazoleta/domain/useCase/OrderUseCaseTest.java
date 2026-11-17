@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -507,9 +508,7 @@ class OrderUseCaseTest {
         verify(orderPersistentPort, never()).save(any());
     }
 
-    // ==========================================
     // TESTS: HU-14 - updateOrderToReady
-    // ==========================================
 
     @Test
     @DisplayName("Should successfully update order to ready, generate PIN, and notify client")
@@ -529,7 +528,8 @@ class OrderUseCaseTest {
         when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
         when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(existingOrder));
         when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(userInformationPort.getClientPhoneNumber(clientId)).thenReturn("+573001234567");
+        UserInfo clientInfo = new UserInfo(clientId, "cliente@test.com", "+573001234567");
+        when(userInformationPort.getUserById(clientId)).thenReturn(clientInfo);
 
         Order result = orderUseCase.updateOrderToReady(orderId);
 
@@ -538,9 +538,75 @@ class OrderUseCaseTest {
         assertNotNull(result.getSecurityPin());
         assertTrue(result.getSecurityPin().matches("\\d{6}"));
         verify(orderPersistentPort, times(1)).save(existingOrder);
-        verify(userInformationPort, times(1)).getClientPhoneNumber(clientId);
+        verify(userInformationPort, times(1)).getUserById(clientId);
         verify(messageNotificationPort, times(1)).sendMessage(eq("+573001234567"), contains(result.getSecurityPin()));
         verify(dishPersistentPort, never()).findById(any());
+    }
+
+    @Test
+    @DisplayName("Should emit trace with client and employee emails when order is marked as ready")
+    void shouldEmitTraceWithUserEmailsWhenOrderIsReady() {
+        Long orderId = 100L;
+        Long employeeId = 3L;
+        Long clientId = 10L;
+        Long restaurantId = 1L;
+        Long ownerId = 2L;
+
+        RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
+        Order existingOrder = new Order(orderId, clientId, null, OrderStatus.EN_PREPARACION, employeeId, restaurantId, new ArrayList<>());
+        Restaurant restaurant = new Restaurant(restaurantId, "Restaurante", "123", "Calle 1", "+573000000000", "https://logo.com", ownerId);
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(employeeId);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(existingOrder));
+        when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userInformationPort.getUserById(clientId)).thenReturn(new UserInfo(clientId, "cliente@test.com", "+573001234567"));
+        when(userInformationPort.getUserById(employeeId)).thenReturn(new UserInfo(employeeId, "empleado@test.com", "+573009999999"));
+        when(restaurantPersistentPort.findById(restaurantId)).thenReturn(Optional.of(restaurant));
+
+        orderUseCase.updateOrderToReady(orderId);
+
+        ArgumentCaptor<OrderTraceLog> traceCaptor = ArgumentCaptor.forClass(OrderTraceLog.class);
+        verify(orderTraceabilityPort, times(1)).saveOrderTrace(traceCaptor.capture());
+        OrderTraceLog trace = traceCaptor.getValue();
+
+        assertEquals(orderId, trace.getOrderId());
+        assertEquals(clientId, trace.getClientId());
+        assertEquals("cliente@test.com", trace.getClientEmail());
+        assertEquals(employeeId, trace.getEmployeeId());
+        assertEquals("empleado@test.com", trace.getEmployeeEmail());
+        assertEquals(OrderStatus.EN_PREPARACION.name(), trace.getPreviousStatus());
+        assertEquals(OrderStatus.LISTO.name(), trace.getNewStatus());
+        assertEquals(restaurantId, trace.getRestaurantId());
+        assertEquals(ownerId, trace.getRestaurantOwnerId());
+        verify(userInformationPort, times(1)).getUserById(clientId);
+    }
+
+    @Test
+    @DisplayName("Should still mark order as ready with null contact data when client is not found in users service")
+    void shouldMarkOrderAsReadyWhenClientIsNotFound() {
+        Long orderId = 100L;
+        Long employeeId = 3L;
+        Long clientId = 10L;
+        Long restaurantId = 1L;
+
+        RestaurantEmployee employee = new RestaurantEmployee(1L, restaurantId, employeeId);
+        Order existingOrder = new Order(orderId, clientId, null, OrderStatus.EN_PREPARACION, employeeId, restaurantId, new ArrayList<>());
+
+        when(userInformationPort.getAuthenticatedUserId()).thenReturn(employeeId);
+        when(restaurantEmployeePersistentPort.findByEmployeeId(employeeId)).thenReturn(Optional.of(employee));
+        when(orderPersistentPort.findById(orderId)).thenReturn(Optional.of(existingOrder));
+        when(orderPersistentPort.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userInformationPort.getUserById(clientId)).thenReturn(null);
+
+        Order result = orderUseCase.updateOrderToReady(orderId);
+
+        assertEquals(OrderStatus.LISTO, result.getStatus());
+        verify(messageNotificationPort, times(1)).sendMessage(isNull(), contains(result.getSecurityPin()));
+
+        ArgumentCaptor<OrderTraceLog> traceCaptor = ArgumentCaptor.forClass(OrderTraceLog.class);
+        verify(orderTraceabilityPort, times(1)).saveOrderTrace(traceCaptor.capture());
+        assertNull(traceCaptor.getValue().getClientEmail());
     }
 
     @Test

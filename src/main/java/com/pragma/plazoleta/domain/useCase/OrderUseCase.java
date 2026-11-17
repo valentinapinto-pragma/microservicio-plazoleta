@@ -13,7 +13,15 @@ import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToClientException
 import com.pragma.plazoleta.domain.exception.OrderDoesNotBelongToRestaurantException;
 import com.pragma.plazoleta.domain.exception.OrderNotFoundException;
 import com.pragma.plazoleta.domain.exception.RestaurantNotFoundException;
-import com.pragma.plazoleta.domain.model.*;
+import com.pragma.plazoleta.domain.model.CustomPage;
+import com.pragma.plazoleta.domain.model.Dish;
+import com.pragma.plazoleta.domain.model.Order;
+import com.pragma.plazoleta.domain.model.OrderDish;
+import com.pragma.plazoleta.domain.model.OrderStatus;
+import com.pragma.plazoleta.domain.model.OrderTraceLog;
+import com.pragma.plazoleta.domain.model.Restaurant;
+import com.pragma.plazoleta.domain.model.RestaurantEmployee;
+import com.pragma.plazoleta.domain.model.UserInfo;
 import com.pragma.plazoleta.domain.repositoryPort.DishPersistentPort;
 import com.pragma.plazoleta.domain.repositoryPort.MessageNotificationPort;
 import com.pragma.plazoleta.domain.repositoryPort.OrderPersistentPort;
@@ -153,9 +161,9 @@ public class OrderUseCase implements OrderServicePort {
         order.setSecurityPin(securityPin);
 
         Order savedOrder = orderPersistentPort.save(order);
-
-        notifyClientOrderReady(savedOrder, securityPin);
-        recordOrderTrace(savedOrder, OrderStatus.EN_PREPARACION.name(), OrderStatus.LISTO.name(), employeeId);
+        UserInfo client = userInformationPort.getUserById(savedOrder.getClientId());
+        notifyClientOrderReady(savedOrder, securityPin, client);
+        recordOrderTrace(savedOrder, OrderStatus.EN_PREPARACION.name(), OrderStatus.LISTO.name(), employeeId, client);
 
         return savedOrder;
     }
@@ -205,9 +213,9 @@ public class OrderUseCase implements OrderServicePort {
         return savedOrder;
     }
 
-    private void recordOrderTrace(Order order, String previousStatus, String newStatus, Long employeeId) {
-        String clientEmail = userInformationPort.getUserEmail(order.getClientId());
-        String employeeEmail = employeeId != null ? userInformationPort.getUserEmail(employeeId) : null;
+    private void recordOrderTrace(Order order, String previousStatus, String newStatus, Long employeeId, UserInfo client) {
+        String clientEmail = client != null ? client.getEmail() : null;
+        String employeeEmail = getEmployeeEmail(employeeId);
         Long restaurantOwnerId = restaurantPersistentPort.findById(order.getRestaurantId())
                 .map(Restaurant::getIdOwner)
                 .orElse(null);
@@ -227,6 +235,19 @@ public class OrderUseCase implements OrderServicePort {
         orderTraceabilityPort.saveOrderTrace(traceLog);
     }
 
+    private void recordOrderTrace(Order order, String previousStatus, String newStatus, Long employeeId) {
+        UserInfo client = userInformationPort.getUserById(order.getClientId());
+        recordOrderTrace(order, previousStatus, newStatus, employeeId, client);
+    }
+
+    private String getEmployeeEmail(Long employeeId) {
+        if (employeeId == null) {
+            return null;
+        }
+        UserInfo employee = userInformationPort.getUserById(employeeId);
+        return employee != null ? employee.getEmail() : null;
+    }
+
     private Order getOrderOrThrow(Long orderId) {
         return orderPersistentPort.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(ORDER_NOT_FOUND_MESSAGE + orderId));
@@ -244,8 +265,8 @@ public class OrderUseCase implements OrderServicePort {
         }
     }
 
-    private void notifyClientOrderReady(Order order, String securityPin) {
-        String clientPhone = userInformationPort.getClientPhoneNumber(order.getClientId());
+    private void notifyClientOrderReady(Order order, String securityPin, UserInfo client) {
+        String clientPhone = client != null ? client.getPhoneNumber() : null;
         String message = String.format(ORDER_READY_MESSAGE_TEMPLATE, order.getId(), securityPin);
         messageNotificationPort.sendMessage(clientPhone, message);
     }
